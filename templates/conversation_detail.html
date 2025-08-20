@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Conversa com {{ conversation.contact_name or conversation.phone_number }} - AsA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-comment-dots me-2"></i>
+        Conversa com {{ conversation.contact_name or 'Contato' }}
+    </h2>
+    <a href="{{ url_for('admin_conversations') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar às Conversas
+    </a>
+</div>
+
+<!-- Conversation Info -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5 class="card-title">
+                    <i class="fas fa-user me-2"></i>
+                    {{ conversation.contact_name or 'Sem nome' }}
+                </h5>
+                <p class="card-text">
+                    <strong>Telefone:</strong> 
+                    <span class="font-monospace">{{ conversation.phone_number }}</span>
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p class="card-text">
+                    <strong>Criada em:</strong> 
+                    {{ conversation.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </p>
+                <p class="card-text">
+                    <strong>Última atividade:</strong> 
+                    {{ conversation.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                </p>
+                <p class="card-text">
+                    <strong>Status:</strong>
+                    {% if conversation.is_active %}
+                        <span class="badge bg-success">Ativa</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inativa</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Messages -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-comments me-2"></i>
+            Mensagens ({{ messages|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if messages %}
+            <div class="chat-container" style="max-height: 600px; overflow-y: auto;">
+                {% for message in messages %}
+                <div class="message-item mb-3 {% if message.is_from_user %}message-user{% else %}message-system{% endif %}">
+                    <div class="row">
+                        <div class="col-{% if message.is_from_user %}8{% else %}8 offset-4{% endif %}">
+                            <div class="card {% if message.is_from_user %}bg-primary{% else %}bg-secondary{% endif %}">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="message-content flex-grow-1">
+                                            {{ message.content }}
+                                        </div>
+                                        <small class="text-{% if message.is_from_user %}light{% else %}muted{% endif %} ms-2">
+                                            <i class="fas fa-{% if message.is_from_user %}user{% else %}robot{% endif %} me-1"></i>
+                                        </small>
+                                    </div>
+                                    <div class="message-timestamp">
+                                        <small class="text-{% if message.is_from_user %}light{% else %}muted{% endif %}">
+                                            {{ message.timestamp.strftime('%d/%m/%Y %H:%M:%S') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-comment fa-5x text-muted mb-4"></i>
+                <h4>Nenhuma mensagem encontrada</h4>
+                <p class="text-muted">Esta conversa ainda não possui mensagens.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Test Message Form -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-paper-plane me-2"></i>
+            Enviar Mensagem de Teste
+        </h5>
+    </div>
+    <div class="card-body">
+        <form action="{{ url_for('send_test_message') }}" method="POST">
+            <input type="hidden" name="phone" value="{{ conversation.phone_number }}">
+            <div class="mb-3">
+                <label for="message" class="form-label">Mensagem:</label>
+                <textarea class="form-control" id="message" name="message" rows="3" 
+                          placeholder="Digite uma mensagem para enviar para este contato..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-2"></i>Enviar Mensagem
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Auto-scroll to bottom of chat
+document.addEventListener('DOMContentLoaded', function() {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+});
+</script>
+{% endblock %}
