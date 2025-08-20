@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Configuração da IA - AsA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-brain me-2"></i>Configuração da IA
+    </h2>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-robot me-2"></i>Prompt da IA
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="ai_prompt" class="form-label">
+                            <i class="fas fa-comment-dots me-2"></i>Prompt Personalizado
+                        </label>
+                        <textarea class="form-control" id="ai_prompt" name="ai_prompt" rows="12" 
+                                  placeholder="Digite o prompt que a IA irá usar para responder as mensagens..."
+                        >{{ current_prompt or default_prompt }}</textarea>
+                        <div class="form-text">
+                            Este será o contexto e instrução que a IA usará para responder TODAS as mensagens recebidas no WhatsApp.
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>Salvar Configuração
+                            </button>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetToDefault()">
+                                <i class="fas fa-undo me-2"></i>Restaurar Padrão
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Dicas e Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Dicas para o Prompt
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Tom:</strong> Defina se a IA deve ser formal, casual, amigável, etc.
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Papel:</strong> Explique quem é a IA (vendedor, suporte, assistente).
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Limites:</strong> Defina o que a IA pode ou não responder.
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Informações:</strong> Inclua dados da empresa, produtos, etc.
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Status da IA -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Status da IA
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-success me-2">●</span>
+                    <span>IA Ativa e Funcionando</span>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-info me-2">●</span>
+                    <span>Modelo: Gemini 2.5 Flash</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary me-2">●</span>
+                    <span>WhatsApp Conectado</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-eye me-2"></i>Teste de Conversação
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">Mensagem de Teste:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="test-message" 
+                           placeholder="Digite uma mensagem para testar..." value="Olá! Como vocês funcionam?">
+                    <button class="btn btn-outline-primary" type="button" onclick="testPrompt()">
+                        <i class="fas fa-paper-plane me-1"></i>Testar
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Resposta da IA:</label>
+                <div class="bg-light p-3 rounded" id="test-response" style="min-height: 60px;">
+                    <em class="text-muted">Clique em "Testar" para ver como a IA responderia com o prompt atual.</em>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const defaultPrompt = `Você é um assistente virtual inteligente para WhatsApp.
+Você deve responder de forma útil, amigável e profissional.
+
+Instruções:
+- Responda em português brasileiro
+- Seja conciso mas informativo  
+- Mantenha um tom amigável e profissional
+- Se não souber algo, seja honesto sobre isso
+- Evite respostas muito longas para WhatsApp`;
+
+function resetToDefault() {
+    if (confirm('Tem certeza que deseja restaurar o prompt padrão? Suas alterações serão perdidas.')) {
+        document.getElementById('ai_prompt').value = defaultPrompt;
+    }
+}
+
+async function testPrompt() {
+    const message = document.getElementById('test-message').value;
+    const prompt = document.getElementById('ai_prompt').value;
+    const responseDiv = document.getElementById('test-response');
+    
+    if (!message.trim()) {
+        alert('Digite uma mensagem para testar!');
+        return;
+    }
+    
+    responseDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando resposta...';
+    
+    try {
+        const response = await fetch('/admin/ai-config/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                prompt: prompt
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            responseDiv.innerHTML = `<strong>IA:</strong> ${data.response}`;
+        } else {
+            responseDiv.innerHTML = `<span class="text-danger">Erro: ${data.error}</span>`;
+        }
+    } catch (error) {
+        responseDiv.innerHTML = `<span class="text-danger">Erro de conexão: ${error.message}</span>`;
+    }
+}
+</script>
+{% endblock %}

@@ -19,6 +19,30 @@ except ImportError:
     types_available = False
     logging.warning("Google Genai library not available")
 
+def get_custom_prompt():
+    """Get custom AI prompt from database"""
+    try:
+        from app import app, db
+        from models import SystemSettings
+        
+        with app.app_context():
+            setting = SystemSettings.query.filter_by(setting_key='ai_prompt').first()
+            if setting and setting.setting_value:
+                return setting.setting_value
+    except Exception as e:
+        logging.error(f"Erro ao obter prompt personalizado: {e}")
+    
+    # Default prompt if none configured
+    return """Você é um assistente virtual inteligente para WhatsApp.
+Você deve responder de forma útil, amigável e profissional.
+
+Instruções:
+- Responda em português brasileiro
+- Seja conciso mas informativo
+- Mantenha um tom amigável e profissional
+- Se não souber algo, seja honesto sobre isso
+- Evite respostas muito longas para WhatsApp"""
+
 def generate_ai_response(user_message: str, conversation_history=None) -> str:
     """
     Generate AI response using Gemini API
@@ -34,6 +58,9 @@ def generate_ai_response(user_message: str, conversation_history=None) -> str:
         if not client:
             return "Desculpe, o serviço de IA não está disponível no momento."
             
+        # Get custom prompt
+        custom_prompt = get_custom_prompt()
+        
         # Build context from conversation history
         context = ""
         if conversation_history:
@@ -45,19 +72,11 @@ def generate_ai_response(user_message: str, conversation_history=None) -> str:
         
         # Create prompt for AI
         prompt = f"""
-        Você é o AsA (Assistente Automático), um assistente virtual inteligente para WhatsApp.
-        Você deve responder de forma útil, amigável e profissional.
+        {custom_prompt}
         
         {context}
         
         Mensagem atual do usuário: {user_message}
-        
-        Instruções:
-        - Responda em português brasileiro
-        - Seja conciso mas informativo
-        - Mantenha um tom amigável e profissional
-        - Se não souber algo, seja honesto sobre isso
-        - Evite respostas muito longas para WhatsApp
         """
         
         response = client.models.generate_content(
@@ -73,6 +92,32 @@ def generate_ai_response(user_message: str, conversation_history=None) -> str:
     except Exception as e:
         logging.error(f"Erro ao gerar resposta AI: {e}")
         return "Desculpe, estou com problemas técnicos. Tente novamente em alguns minutos."
+
+def test_prompt_response(user_message: str, custom_prompt: str) -> str:
+    """Test a prompt with a message without saving to database"""
+    try:
+        if not client:
+            return "Serviço de IA não disponível"
+            
+        prompt = f"""
+        {custom_prompt}
+        
+        Mensagem atual do usuário: {user_message}
+        """
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        
+        if response.text:
+            return response.text.strip()
+        else:
+            return "Não consegui gerar resposta"
+            
+    except Exception as e:
+        logging.error(f"Erro ao testar prompt: {e}")
+        return f"Erro: {str(e)}"
 
 def analyze_message_intent(message: str) -> dict:
     """

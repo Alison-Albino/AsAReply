@@ -267,6 +267,67 @@ def admin_responses():
     responses = AutoResponse.query.order_by(AutoResponse.created_at.desc()).all()
     return render_template('responses.html', responses=responses)
 
+@app.route('/admin/ai-config', methods=['GET', 'POST'])
+@admin_required
+def ai_config():
+    """Configure AI prompt"""
+    if request.method == 'POST':
+        ai_prompt = request.form.get('ai_prompt')
+        
+        # Save or update AI prompt setting
+        setting = SystemSettings.query.filter_by(setting_key='ai_prompt').first()
+        if not setting:
+            setting = SystemSettings(setting_key='ai_prompt')
+            db.session.add(setting)
+        
+        setting.setting_value = ai_prompt
+        
+        try:
+            db.session.commit()
+            flash('Prompt da IA atualizado com sucesso!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Erro ao salvar configuração: {e}', 'error')
+        
+        return redirect(url_for('ai_config'))
+    
+    # Get current prompt
+    setting = SystemSettings.query.filter_by(setting_key='ai_prompt').first()
+    current_prompt = setting.setting_value if setting else None
+    
+    default_prompt = """Você é um assistente virtual inteligente para WhatsApp.
+Você deve responder de forma útil, amigável e profissional.
+
+Instruções:
+- Responda em português brasileiro
+- Seja conciso mas informativo
+- Mantenha um tom amigável e profissional
+- Se não souber algo, seja honesto sobre isso
+- Evite respostas muito longas para WhatsApp"""
+    
+    return render_template('ai_config.html', 
+                         current_prompt=current_prompt, 
+                         default_prompt=default_prompt)
+
+@app.route('/admin/ai-config/test', methods=['POST'])
+@admin_required
+def test_ai_prompt():
+    """Test AI prompt with a message"""
+    from ai_service import test_prompt_response
+    
+    data = request.get_json()
+    message = data.get('message')
+    prompt = data.get('prompt')
+    
+    if not message or not prompt:
+        return jsonify({'success': False, 'error': 'Mensagem e prompt são obrigatórios'})
+    
+    try:
+        response = test_prompt_response(message, prompt)
+        return jsonify({'success': True, 'response': response})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/admin/responses/add', methods=['GET', 'POST'])
 @admin_required
 def add_response():
