@@ -115,30 +115,19 @@ class WhatsAppService:
             self.send_response(conversation, response_text)
     
     def generate_response(self, message_content: str, conversation: Conversation) -> str:
-        """Generate appropriate response for the message"""
-        # Check for standard auto-responses first
-        auto_response = AutoResponse.query.filter(
-            AutoResponse.is_active == True,
-            AutoResponse.trigger_keyword.ilike(f'%{message_content.lower()}%')
-        ).first()
-        
-        if auto_response:
-            return auto_response.response_text
-        
-        # Analyze message intent
-        intent = analyze_message_intent(message_content)
-        
-        # If urgent or requires human, provide fallback response
-        if intent.get('urgencia') == 'alto' or intent.get('requer_humano'):
-            return ("Obrigado pela sua mensagem. Detectei que pode ser algo urgente. "
-                   "Nossa equipe será notificada e retornará o contato em breve.")
-        
-        # Generate AI response
-        recent_messages = Message.query.filter_by(
-            conversation_id=conversation.id
-        ).order_by(Message.timestamp.desc()).limit(10).all()
-        
-        return generate_ai_response(message_content, recent_messages[::-1])
+        """Generate AI response using custom prompt for ALL messages"""
+        try:
+            # Get recent conversation history for context
+            recent_messages = Message.query.filter_by(
+                conversation_id=conversation.id
+            ).order_by(Message.timestamp.desc()).limit(10).all()
+            
+            # Generate AI response using custom prompt
+            return generate_ai_response(message_content, recent_messages[::-1])
+            
+        except Exception as e:
+            logging.error(f"Erro ao gerar resposta: {e}")
+            return "Olá! Estou passando por alguns ajustes técnicos. Que tal tentar novamente em alguns minutos?"
     
     def send_response(self, conversation: Conversation, response_text: str):
         """Send response message usando Baileys"""
