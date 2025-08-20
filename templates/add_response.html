@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Adicionar Resposta - AsA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-plus me-2"></i>Adicionar Nova Resposta
+    </h2>
+    <a href="{{ url_for('admin_responses') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar às Respostas
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="trigger_keyword" class="form-label">
+                    <i class="fas fa-key me-2"></i>Palavra-chave ou Trigger
+                </label>
+                <input type="text" class="form-control" id="trigger_keyword" name="trigger_keyword" 
+                       placeholder="Ex: oi, olá, ajuda, preço..." required>
+                <div class="form-text">
+                    Digite a palavra ou frase que irá ativar esta resposta automática.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="response_text" class="form-label">
+                    <i class="fas fa-comment me-2"></i>Texto da Resposta
+                </label>
+                <textarea class="form-control" id="response_text" name="response_text" rows="4" 
+                          placeholder="Digite a mensagem que será enviada automaticamente..." required></textarea>
+                <div class="form-text">
+                    Esta será a mensagem enviada quando a palavra-chave for detectada.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                    <label class="form-check-label" for="is_active">
+                        <i class="fas fa-toggle-on me-2"></i>Resposta ativa
+                    </label>
+                </div>
+                <div class="form-text">
+                    Marque para ativar esta resposta imediatamente após salvar.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="priority" class="form-label">
+                    <i class="fas fa-sort-numeric-up me-2"></i>Prioridade
+                </label>
+                <select class="form-select" id="priority" name="priority">
+                    <option value="1">Baixa (1)</option>
+                    <option value="2">Normal (2)</option>
+                    <option value="3" selected>Alta (3)</option>
+                    <option value="4">Muito Alta (4)</option>
+                    <option value="5">Crítica (5)</option>
+                </select>
+                <div class="form-text">
+                    Respostas com prioridade maior são processadas primeiro.
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Salvar Resposta
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Preview Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-eye me-2"></i>Preview da Resposta
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle me-2"></i>Como funciona:</h6>
+            <p class="mb-2">
+                1. Quando um usuário enviar uma mensagem contendo a palavra-chave definida
+            </p>
+            <p class="mb-2">
+                2. O sistema irá automaticamente responder com o texto configurado
+            </p>
+            <p class="mb-0">
+                3. A resposta será enviada de acordo com a prioridade estabelecida
+            </p>
+        </div>
+        
+        <div class="border rounded p-3 bg-light">
+            <div class="row">
+                <div class="col-8">
+                    <div class="card bg-primary text-white mb-2">
+                        <div class="card-body py-2">
+                            <small><i class="fas fa-user me-1"></i>Usuário:</small><br>
+                            <span id="preview-trigger">oi</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-8 offset-4">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body py-2">
+                            <small><i class="fas fa-robot me-1"></i>AsA Bot:</small><br>
+                            <span id="preview-response">Olá! Como posso te ajudar?</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Live preview
+document.addEventListener('DOMContentLoaded', function() {
+    const triggerInput = document.getElementById('trigger_keyword');
+    const responseInput = document.getElementById('response_text');
+    const previewTrigger = document.getElementById('preview-trigger');
+    const previewResponse = document.getElementById('preview-response');
+    
+    function updatePreview() {
+        previewTrigger.textContent = triggerInput.value || 'oi';
+        previewResponse.textContent = responseInput.value || 'Olá! Como posso te ajudar?';
+    }
+    
+    triggerInput.addEventListener('input', updatePreview);
+    responseInput.addEventListener('input', updatePreview);
+});
+</script>
+{% endblock %}
