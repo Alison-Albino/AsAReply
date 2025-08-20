@@ -88,18 +88,21 @@ async function generateQRCode() {
         const response = await fetch('/generate_qr');
         const data = await response.json();
         
+        if (!data.success) {
+            throw new Error(data.error || 'Erro ao gerar QR Code');
+        }
+        
         const qrDisplay = document.getElementById('qr-display');
-        if (qrDisplay) {
+        if (qrDisplay && data.qr_image) {
             qrDisplay.innerHTML = `
-                <div class="qr-code-display">
-                    <i class="fas fa-qrcode fa-5x text-dark"></i>
+                <div class="qr-code-display text-center">
+                    <img src="${data.qr_image}" alt="QR Code" class="qr-image mb-3" style="max-width: 300px; width: 100%;">
                     <p class="mt-2 mb-1 text-dark"><strong>Código gerado!</strong></p>
                     <small class="text-muted">Escaneie com seu WhatsApp</small>
-                    <p class="mt-2 mb-0 font-monospace small text-muted">
-                        ${data.qr_code.substring(0, 30)}...
-                    </p>
                 </div>
             `;
+        } else {
+            throw new Error('QR Code não disponível');
         }
         
         // Start monitoring for connection

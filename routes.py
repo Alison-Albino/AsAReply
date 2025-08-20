@@ -21,12 +21,23 @@ def index():
 @app.route('/generate_qr')
 def generate_qr():
     """Generate new QR code for WhatsApp connection"""
-    qr_code = whatsapp_service.generate_qr_code()
+    qr_result = whatsapp_service.generate_qr_code()
     
-    # QR Code gerado - não conecta automaticamente mais
-    logging.info("QR Code gerado - aguardando escaneamento")
+    if qr_result:
+        # Get the QR image from database
+        with app.app_context():
+            connection = WhatsAppConnection.query.first()
+            if connection and connection.qr_code:
+                qr_image = connection.qr_code
+                logging.info("QR Code gerado - aguardando escaneamento")
+                return jsonify({
+                    'success': True,
+                    'qr_code': qr_result,
+                    'qr_image': qr_image
+                })
     
-    return jsonify({'qr_code': qr_code})
+    logging.error("Erro ao gerar QR Code")
+    return jsonify({'success': False, 'error': 'Erro desconhecido'}), 500
 
 @app.route('/simulate_scan')
 def simulate_scan():
