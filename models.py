@@ -9,6 +9,8 @@ class Conversation(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    ai_paused = db.Column(db.Boolean, default=False)  # True when human takes over
+    paused_at = db.Column(db.DateTime)  # When AI was paused
     
     # Relationship with messages
     messages = db.relationship('Message', backref='conversation', lazy=True, cascade='all, delete-orphan')

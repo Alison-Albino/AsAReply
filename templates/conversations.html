@@ -59,6 +59,12 @@
                             {% else %}
                                 <span class="badge bg-secondary">Inativa</span>
                             {% endif %}
+                            
+                            {% if conversation.ai_paused %}
+                                <br><span class="badge bg-warning mt-1">IA Pausada</span>
+                            {% else %}
+                                <br><span class="badge bg-info mt-1">IA Ativa</span>
+                            {% endif %}
                         </td>
                         <td>
                             <div class="btn-group" role="group">
@@ -66,6 +72,23 @@
                                    class="btn btn-sm btn-outline-primary" title="Ver conversa">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                
+                                {% if conversation.ai_paused %}
+                                    <form method="POST" action="{{ url_for('toggle_ai_for_conversation', conversation_id=conversation.id) }}" 
+                                          style="display: inline-block;">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Retomar IA">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" action="{{ url_for('toggle_ai_for_conversation', conversation_id=conversation.id) }}" 
+                                          style="display: inline-block;">
+                                        <button type="submit" class="btn btn-sm btn-warning" title="Pausar IA">
+                                            <i class="fas fa-pause"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                
                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                         onclick="confirmDelete({{ conversation.id }}, '{{ conversation.contact_name or conversation.phone_number }}')"
                                         title="Excluir conversa">

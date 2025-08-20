@@ -32,4 +32,26 @@ with app.app_context():
     # Import models to create tables
     import models  # noqa: F401
     db.create_all()
+    
+    # Add new columns if they don't exist (migration)
+    try:
+        from sqlalchemy import text
+        # Check if ai_paused column exists
+        with db.engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info(conversation)"))
+            columns = [row[1] for row in result]
+            
+            if 'ai_paused' not in columns:
+                conn.execute(text("ALTER TABLE conversation ADD COLUMN ai_paused BOOLEAN DEFAULT 0"))
+                conn.commit()
+                logging.info("✅ Added ai_paused column")
+                
+            if 'paused_at' not in columns:
+                conn.execute(text("ALTER TABLE conversation ADD COLUMN paused_at DATETIME"))
+                conn.commit()
+                logging.info("✅ Added paused_at column")
+            
+    except Exception as e:
+        logging.info(f"Migration info: {e}")
+    
     logging.info("Database tables created successfully")

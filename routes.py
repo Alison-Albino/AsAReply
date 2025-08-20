@@ -238,6 +238,75 @@ def admin_conversations():
     
     return render_template('conversations.html', conversations=conversations)
 
+@app.route('/admin/conversations/<int:conversation_id>/toggle-ai', methods=['POST'])
+@admin_required
+def toggle_ai_for_conversation(conversation_id):
+    """Toggle AI pause/resume for a conversation"""
+    conversation = Conversation.query.get_or_404(conversation_id)
+    
+    if conversation.ai_paused:
+        # Resume AI
+        conversation.ai_paused = False
+        conversation.paused_at = None
+        db.session.commit()
+        flash(f'IA retomada para {conversation.contact_name or conversation.phone_number}', 'success')
+    else:
+        # Pause AI
+        conversation.ai_paused = True
+        conversation.paused_at = datetime.utcnow()
+        db.session.commit()
+        flash(f'IA pausada para {conversation.contact_name or conversation.phone_number}', 'info')
+    
+    return redirect(url_for('admin_conversations'))
+
+@app.route('/admin/send-manual-message/<int:conversation_id>', methods=['POST'])
+@admin_required
+def send_manual_message(conversation_id):
+    """Send manual message and pause AI"""
+    from whatsapp_service import whatsapp_service
+    from baileys_service import baileys_service
+    
+    conversation = Conversation.query.get_or_404(conversation_id)
+    message_text = request.form.get('message_text', '').strip()
+    
+    if not message_text:
+        flash('Mensagem não pode estar vazia', 'error')
+        return redirect(url_for('conversation_detail', conversation_id=conversation_id))
+    
+    try:
+        # Send message via Baileys
+        result = baileys_service.send_message(conversation.phone_number, message_text)
+        
+        if result.get('success'):
+            # Save manual message to database
+            manual_message = Message()
+            manual_message.conversation_id = conversation.id
+            manual_message.content = message_text
+            manual_message.is_from_user = False
+            manual_message.message_type = 'text'
+            manual_message.response_type = 'manual'
+            
+            db.session.add(manual_message)
+            
+            # Pause AI for this conversation
+            conversation.ai_paused = True
+            conversation.paused_at = datetime.utcnow()
+            conversation.updated_at = datetime.utcnow()
+            
+            db.session.commit()
+            
+            # Pause AI in the service as well
+            whatsapp_service.pause_ai_for_conversation(conversation.phone_number)
+            
+            flash('Mensagem enviada! IA pausada para esta conversa.', 'success')
+        else:
+            flash(f'Erro ao enviar mensagem: {result.get("error")}', 'error')
+            
+    except Exception as e:
+        flash(f'Erro ao enviar mensagem: {e}', 'error')
+    
+    return redirect(url_for('conversation_detail', conversation_id=conversation_id))
+
 @app.route('/admin/conversation/<int:conversation_id>')
 @admin_required
 def view_conversation(conversation_id):

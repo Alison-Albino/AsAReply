@@ -134,6 +134,11 @@ class WhatsAppService:
                     logging.error(f"Conversa não encontrada: {conversation_id}")
                     return
                 
+                # Check if AI is paused for this conversation
+                if conversation.ai_paused:
+                    logging.info(f"🚫 IA pausada para {phone_number} - não enviando resposta automática")
+                    return
+                
                 logging.info(f"🔄 Processando fila de {len(messages)} mensagens para {phone_number}")
                 
                 # Combine all messages into context
@@ -152,10 +157,31 @@ class WhatsAppService:
                 # Try to get conversation for fallback
                 try:
                     conversation = Conversation.query.filter_by(phone_number=phone_number).first()
-                    if conversation:
+                    if conversation and not conversation.ai_paused:
                         self.send_response(conversation, "Desculpe, estou com alguns problemas técnicos. Tente novamente!")
                 except:
                     logging.error(f"Não foi possível enviar mensagem de fallback para {phone_number}")
+    
+    def pause_ai_for_conversation(self, phone_number: str):
+        """Pause AI responses when human takes over"""
+        with app.app_context():
+            try:
+                conversation = Conversation.query.filter_by(phone_number=phone_number).first()
+                if conversation:
+                    conversation.ai_paused = True
+                    conversation.paused_at = datetime.utcnow()
+                    db.session.commit()
+                    logging.info(f"🚫 IA pausada para {phone_number} - humano assumiu o controle")
+                    
+                    # Clear any pending queue for this user
+                    if phone_number in self.message_queues:
+                        self.message_queues[phone_number] = []
+                    if phone_number in self.queue_timers:
+                        self.queue_timers[phone_number].cancel()
+                        del self.queue_timers[phone_number]
+                        
+            except Exception as e:
+                logging.error(f"Erro ao pausar IA: {e}")
     
     def process_incoming_message(self, phone_number: str, message_content: str, contact_name: str = ""):
         """Process incoming WhatsApp message with queue system"""

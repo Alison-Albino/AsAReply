@@ -96,25 +96,54 @@
     </div>
 </div>
 
-<!-- Test Message Form -->
+<!-- Manual Message Form -->
 <div class="card mt-4">
     <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-paper-plane me-2"></i>
-            Enviar Mensagem de Teste
-        </h5>
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-paper-plane me-2"></i>
+                Responder Manualmente
+            </h5>
+            {% if conversation.ai_paused %}
+                <span class="badge bg-warning">IA Pausada</span>
+            {% else %}
+                <span class="badge bg-info">IA Ativa</span>
+            {% endif %}
+        </div>
     </div>
     <div class="card-body">
-        <form action="{{ url_for('send_test_message') }}" method="POST">
-            <input type="hidden" name="phone" value="{{ conversation.phone_number }}">
-            <div class="mb-3">
-                <label for="message" class="form-label">Mensagem:</label>
-                <textarea class="form-control" id="message" name="message" rows="3" 
-                          placeholder="Digite uma mensagem para enviar para este contato..." required></textarea>
+        {% if conversation.ai_paused %}
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>IA pausada:</strong> Você assumiu o controle desta conversa. Para retomar a IA, use o botão abaixo.
             </div>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-paper-plane me-2"></i>Enviar Mensagem
-            </button>
+        {% endif %}
+        
+        <form action="{{ url_for('send_manual_message', conversation_id=conversation.id) }}" method="POST">
+            <div class="mb-3">
+                <label for="message_text" class="form-label">Sua resposta:</label>
+                <textarea class="form-control" id="message_text" name="message_text" rows="3" 
+                          placeholder="Digite sua resposta para este cliente..." required></textarea>
+                <div class="form-text">
+                    {% if not conversation.ai_paused %}
+                        <strong>Aviso:</strong> Ao enviar esta mensagem, a IA será automaticamente pausada para esta conversa.
+                    {% endif %}
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Enviar Mensagem
+                </button>
+                
+                {% if conversation.ai_paused %}
+                    <form method="POST" action="{{ url_for('toggle_ai_for_conversation', conversation_id=conversation.id) }}" 
+                          style="display: inline-block;">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-play me-2"></i>Retomar IA
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
         </form>
     </div>
 </div>
