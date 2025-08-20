@@ -35,18 +35,9 @@ class WhatsAppService:
         return qr_base64
     
     def simulate_connection(self):
-        """Simulate WhatsApp connection after QR scan"""
-        time.sleep(5)  # Simulate connection delay
-        
-        with app.app_context():
-            connection = WhatsAppConnection.query.first()
-            if connection:
-                connection.is_connected = True
-                connection.last_connected = datetime.utcnow()
-                connection.qr_code = None
-                db.session.commit()
-                self.is_connected = True
-                logging.info("WhatsApp connected successfully")
+        """Simulate WhatsApp connection - removed auto-connection"""
+        # Conexão automática removida - agora só conecta quando receber confirmação real
+        logging.info("QR Code gerado - aguardando escaneamento real")
     
     def start_typing_simulation(self, phone_number: str):
         """Start typing simulation for a conversation"""

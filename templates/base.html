@@ -34,10 +34,16 @@
                     <a class="nav-link" href="{{ url_for('admin_responses') }}">
                         <i class="fas fa-robot me-1"></i>Respostas
                     </a>
+                    <a class="nav-link" href="{{ url_for('whatsapp_apis') }}">
+                        <i class="fas fa-plug me-1"></i>APIs
+                    </a>
                     <a class="nav-link" href="{{ url_for('admin_logout') }}">
                         <i class="fas fa-sign-out-alt me-1"></i>Sair
                     </a>
                 {% else %}
+                    <a class="nav-link" href="{{ url_for('whatsapp_apis') }}">
+                        <i class="fas fa-plug me-1"></i>APIs
+                    </a>
                     <a class="nav-link" href="{{ url_for('admin_login') }}">
                         <i class="fas fa-user-shield me-1"></i>Admin
                     </a>

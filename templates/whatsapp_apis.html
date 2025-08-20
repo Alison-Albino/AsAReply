@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}APIs WhatsApp - AsA{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="text-center mb-5">
+            <h1 class="display-5 mb-3">
+                <i class="fab fa-whatsapp text-success"></i>
+                APIs WhatsApp Disponíveis
+            </h1>
+            <p class="lead text-muted">O sistema AsA atualmente está em modo de simulação. Aqui estão as opções de APIs reais de terceiros para WhatsApp:</p>
+        </div>
+
+        <!-- Current Status -->
+        <div class="alert alert-warning mb-4">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Status Atual</h5>
+            <p class="mb-0">O sistema está usando <strong>simulação</strong> para demonstração. Para produção, você precisará integrar uma das APIs abaixo.</p>
+        </div>
+
+        <!-- API Options -->
+        <div class="row">
+            <!-- WhatsApp Business API -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-building me-2"></i>WhatsApp Business API
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="text-success">✓ Oficial Meta</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Totalmente oficial</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Suporte completo</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Pago (a partir de $0.005/msg)</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Processo de aprovação</li>
+                        </ul>
+                        <div class="mt-auto">
+                            <span class="badge bg-success">Recomendado para empresas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Twilio WhatsApp API -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cloud me-2"></i>Twilio WhatsApp API
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="text-primary">✓ Parceiro Oficial</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Parceiro oficial Meta</li>
+                            <li><i class="fas fa-check text-success me-2"></i>SDK robusto</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Sandbox gratuito</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Pago após sandbox</li>
+                        </ul>
+                        <div class="mt-auto">
+                            <span class="badge bg-primary">Boa para startups</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WhatsApp Web API (Não oficial) -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-globe me-2"></i>WhatsApp Web JS
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="text-warning">⚠️ Não Oficial</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Gratuito</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Fácil implementação</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Não oficial</li>
+                            <li><i class="fas fa-times text-danger me-2"></i>Risco de bloqueio</li>
+                        </ul>
+                        <div class="mt-auto">
+                            <span class="badge bg-warning text-dark">Para testes apenas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evolution API -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-rocket me-2"></i>Evolution API
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="text-info">✓ Open Source</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success me-2"></i>Open source</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Self-hosted</li>
+                            <li><i class="fas fa-check text-success me-2"></i>API REST</li>
+                            <li><i class="fas fa-exclamation text-warning me-2"></i>Não oficial</li>
+                        </ul>
+                        <div class="mt-auto">
+                            <span class="badge bg-info">Popular no Brasil</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Implementation Guide -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-code me-2"></i>Como Integrar uma API Real
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Para conectar uma API real ao sistema AsA, você precisa:</p>
+                <ol>
+                    <li><strong>Escolher uma API:</strong> Recomendamos Twilio para começar (tem sandbox gratuito)</li>
+                    <li><strong>Obter credenciais:</strong> Registrar-se e obter chaves de API</li>
+                    <li><strong>Modificar o código:</strong> Substituir a simulação pela integração real</li>
+                    <li><strong>Configurar webhooks:</strong> Para receber mensagens</li>
+                </ol>
+
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6><i class="fas fa-info-circle text-primary me-2"></i>Arquivos para modificar:</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><code>whatsapp_service.py</code> - Lógica de conexão</li>
+                        <li><code>routes.py</code> - Endpoints de webhook</li>
+                        <li><code>models.py</code> - Adicionar campos se necessário</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Current System -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-flask me-2"></i>Testar Sistema Atual (Simulação)
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Você pode testar o sistema atual que simula o comportamento do WhatsApp:</p>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                                <i class="fas fa-qrcode me-2"></i>Gerar QR Code
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <a href="{{ url_for('admin_login') }}" class="btn btn-secondary">
+                                <i class="fas fa-user-shield me-2"></i>Painel Admin
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-grid">
+                            <button class="btn btn-success" onclick="sendTestMessage()">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar Teste
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <i class="fas fa-lightbulb me-1"></i>
+                        <strong>Dica:</strong> Senha padrão do admin: <code>admin123</code>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function sendTestMessage() {
+    fetch('/api/simulate_message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            phone: '5511999999999',
+            message: 'Teste da página de APIs',
+            name: 'Usuário Teste APIs'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert('Mensagem de teste enviada! Verifique o painel admin.', 'success');
+        }
+    })
+    .catch(error => {
+        showAlert('Erro ao enviar teste.', 'danger');
+    });
+}
+</script>
+{% endblock %}

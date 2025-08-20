@@ -107,6 +107,12 @@ async function generateQRCode() {
         
         showAlert('Código QR gerado! Escaneie com seu WhatsApp.', 'success');
         
+        // Mostrar botão de simular escaneamento para teste
+        const simulateBtn = document.getElementById('simulate-scan-btn');
+        if (simulateBtn) {
+            simulateBtn.style.display = 'inline-block';
+        }
+        
     } catch (error) {
         console.error('Error generating QR code:', error);
         showAlert('Erro ao gerar código QR. Tente novamente.', 'danger');
@@ -164,6 +170,37 @@ async function sendTestMessage() {
     }
 }
 
+// Simulate QR scan for testing
+async function simulateScan() {
+    const button = document.getElementById('simulate-scan-btn');
+    if (!button) return;
+    
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Conectando...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch('/simulate_scan');
+        const data = await response.json();
+        
+        if (data.status === 'connected') {
+            showAlert('WhatsApp conectado com sucesso!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            throw new Error('Erro na conexão');
+        }
+        
+    } catch (error) {
+        console.error('Error simulating scan:', error);
+        showAlert('Erro ao simular escaneamento.', 'danger');
+    } finally {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    }
+}
+
 // Event listeners
 document.addEventListener('DOMContentLoaded', function() {
     // QR Code generation button
@@ -176,6 +213,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendTestBtn = document.getElementById('send-test-btn');
     if (sendTestBtn) {
         sendTestBtn.addEventListener('click', sendTestMessage);
+    }
+    
+    // Simulate scan button
+    const simulateScanBtn = document.getElementById('simulate-scan-btn');
+    if (simulateScanBtn) {
+        simulateScanBtn.addEventListener('click', simulateScan);
     }
     
     // Auto-focus on password field in login page

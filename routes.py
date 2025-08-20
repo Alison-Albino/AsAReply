@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+from datetime import datetime
 from flask import render_template, request, redirect, url_for, session, jsonify, flash
 from werkzeug.security import check_password_hash, generate_password_hash
 from app import app, db
@@ -21,19 +22,37 @@ def generate_qr():
     """Generate new QR code for WhatsApp connection"""
     qr_code = whatsapp_service.generate_qr_code()
     
-    # Start connection simulation in background
-    threading.Thread(target=whatsapp_service.simulate_connection, daemon=True).start()
-    
-    # Start test message simulation
-    simulate_incoming_messages()
+    # QR Code gerado - não conecta automaticamente mais
+    logging.info("QR Code gerado - aguardando escaneamento")
     
     return jsonify({'qr_code': qr_code})
+
+@app.route('/simulate_scan')
+def simulate_scan():
+    """Simular escaneamento do QR Code para teste"""
+    with app.app_context():
+        connection = WhatsAppConnection.query.first()
+        if connection:
+            connection.is_connected = True
+            connection.last_connected = datetime.utcnow()
+            connection.qr_code = None
+            db.session.commit()
+            
+    # Iniciar simulação de mensagens após "conexão"
+    simulate_incoming_messages()
+    
+    return jsonify({'status': 'connected'})
 
 @app.route('/connection_status')
 def connection_status():
     """Get current connection status"""
     status = whatsapp_service.get_connection_status()
     return jsonify(status)
+
+@app.route('/whatsapp-apis')
+def whatsapp_apis():
+    """Página explicativa sobre APIs WhatsApp disponíveis"""
+    return render_template('whatsapp_apis.html')
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
