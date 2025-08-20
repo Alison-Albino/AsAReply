@@ -3,9 +3,15 @@ import logging
 try:
     from google import genai
     from google.genai import types
-    # Configure Gemini AI client
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-    types_available = True
+    # Configure Gemini AI client only if API key is available
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        client = genai.Client(api_key=api_key)
+        types_available = True
+    else:
+        client = None
+        types_available = False
+        logging.warning("GEMINI_API_KEY not provided - AI features will be disabled")
 except ImportError:
     genai = None
     client = None
