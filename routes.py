@@ -175,6 +175,41 @@ def message_received():
         logging.error(f"Erro ao processar mensagem: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/human-response-detected', methods=['POST'])
+def human_response_detected():
+    """Webhook para detectar quando humano responde manualmente"""
+    try:
+        data = request.get_json()
+        phone = data.get('phone')
+        message = data.get('message')
+        
+        if phone and message:
+            logging.info(f"👤 Resposta manual detectada para {phone}: {message}")
+            
+            # Pausar IA para esta conversa
+            whatsapp_service.pause_ai_for_conversation(phone)
+            
+            # Salvar mensagem manual no banco
+            with app.app_context():
+                conversation = Conversation.query.filter_by(phone_number=phone).first()
+                if conversation:
+                    # Salvar mensagem manual
+                    manual_message = Message()
+                    manual_message.conversation_id = conversation.id
+                    manual_message.content = message
+                    manual_message.is_from_user = False
+                    manual_message.message_type = 'text'
+                    manual_message.response_type = 'manual'
+                    
+                    db.session.add(manual_message)
+                    db.session.commit()
+                    logging.info(f"💾 Mensagem manual salva no banco para {phone}")
+            
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logging.error(f"Erro ao processar resposta manual: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     """Admin login page"""

@@ -94,7 +94,7 @@ async function connectToWhatsApp() {
         socket.ev.on('messages.upsert', async (m) => {
             const message = m.messages[0];
             
-            if (!message.key.fromMe && message.message) {
+            if (message.message) {
                 const phoneNumber = message.key.remoteJid;
                 
                 // Extrair texto da mensagem
@@ -107,16 +107,33 @@ async function connectToWhatsApp() {
                 
                 if (messageText && phoneNumber) {
                     const cleanPhone = phoneNumber.replace('@s.whatsapp.net', '');
-                    console.log(`📨 Mensagem de ${cleanPhone}: ${messageText}`);
                     
-                    // Enviar para Flask processar
-                    await notifyFlask('/api/message-received', {
-                        phone: cleanPhone,
-                        message: messageText,
-                        contact_name: message.pushName || '',
-                        message_id: message.key.id,
-                        timestamp: new Date().toISOString()
-                    });
+                    if (!message.key.fromMe) {
+                        // Mensagem de cliente para nós
+                        console.log(`📨 Mensagem de ${cleanPhone}: ${messageText}`);
+                        
+                        // Enviar para Flask processar
+                        await notifyFlask('/api/message-received', {
+                            phone: cleanPhone,
+                            message: messageText,
+                            contact_name: message.pushName || '',
+                            message_id: message.key.id,
+                            timestamp: new Date().toISOString(),
+                            is_from_user: true
+                        });
+                    } else {
+                        // Mensagem nossa para cliente (detectar resposta manual do humano)
+                        console.log(`👤 Resposta manual detectada para ${cleanPhone}: ${messageText}`);
+                        
+                        // Notificar Flask que humano respondeu (pausar IA)
+                        await notifyFlask('/api/human-response-detected', {
+                            phone: cleanPhone,
+                            message: messageText,
+                            timestamp: new Date().toISOString(),
+                            is_from_user: false,
+                            is_manual: true
+                        });
+                    }
                 }
             }
         });
