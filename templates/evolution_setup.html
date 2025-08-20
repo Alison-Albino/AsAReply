@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Configuração Evolution API - AsA{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="text-center mb-5">
+            <h1 class="display-5 mb-3">
+                <i class="fas fa-rocket text-success"></i>
+                Evolution API - Configuração
+            </h1>
+            <p class="lead text-muted">Configure sua instância da Evolution API para conectar ao WhatsApp</p>
+        </div>
+
+        <!-- Status Atual -->
+        <div class="alert alert-info mb-4">
+            <h5><i class="fas fa-info-circle me-2"></i>Status da Integração</h5>
+            <p class="mb-0">Sistema AsA integrado com <strong>Evolution API + Google Gemini</strong></p>
+        </div>
+
+        <!-- Configuração Evolution API -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>1. Instalar Evolution API
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Primeiro, você precisa ter uma instância da Evolution API rodando. Escolha uma opção:</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">🌐 Instância Online (Recomendado)</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Use um serviço de hospedagem da Evolution API:</p>
+                                <ul class="list-unstyled">
+                                    <li>• <a href="https://evolution-api.com" target="_blank">Evolution API Oficial</a></li>
+                                    <li>• Render, Railway, Heroku</li>
+                                    <li>• VPS com Docker</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-secondary">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">💻 Instância Local</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Para desenvolvimento:</p>
+                                <div class="bg-dark text-light p-2 rounded">
+                                    <code>
+                                        git clone https://github.com/EvolutionAPI/evolution-api<br>
+                                        cd evolution-api<br>
+                                        docker-compose up -d
+                                    </code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuração de Variáveis -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-key me-2"></i>2. Configurar Variáveis
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Configure estas variáveis no seu ambiente Replit:</p>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Variável</th>
+                                <th>Exemplo</th>
+                                <th>Descrição</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>EVOLUTION_API_URL</code></td>
+                                <td>https://sua-api.evolution.com</td>
+                                <td>URL da sua instância Evolution API</td>
+                            </tr>
+                            <tr>
+                                <td><code>EVOLUTION_API_KEY</code></td>
+                                <td>SUA_CHAVE_AQUI</td>
+                                <td>Chave de API da Evolution</td>
+                            </tr>
+                            <tr>
+                                <td><code>EVOLUTION_INSTANCE_NAME</code></td>
+                                <td>asa_whatsapp</td>
+                                <td>Nome da instância (opcional)</td>
+                            </tr>
+                            <tr>
+                                <td><code>WEBHOOK_URL</code></td>
+                                <td>https://seu-replit.replit.app</td>
+                                <td>URL do seu Replit para webhooks</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Importante:</strong> Configure essas variáveis em "Secrets" do Replit para segurança.
+                </div>
+            </div>
+        </div>
+
+        <!-- Teste da Conexão -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-flask me-2"></i>3. Testar Conexão
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Após configurar, teste se a Evolution API está funcionando:</p>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <button class="btn btn-primary w-100" onclick="testEvolutionAPI()">
+                            <i class="fas fa-plug me-2"></i>Testar API
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100" onclick="createInstance()">
+                            <i class="fas fa-plus me-2"></i>Criar Instância
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-info w-100" onclick="getStatus()">
+                            <i class="fas fa-info me-2"></i>Ver Status
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="test-results" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Como Usar -->
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-play me-2"></i>4. Como Usar
+                </h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Configure as variáveis</strong> acima nos Secrets do Replit</li>
+                    <li><strong>Reinicie o aplicativo</strong> para carregar as novas configurações</li>
+                    <li>Vá para a <a href="{{ url_for('index') }}">página inicial</a> e clique em "Gerar QR Code"</li>
+                    <li><strong>Escaneie o QR Code</strong> com seu WhatsApp</li>
+                    <li><strong>Envie mensagens</strong> para seu número e veja as respostas automáticas!</li>
+                </ol>
+                
+                <div class="alert alert-success mt-3">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Dica:</strong> As mensagens serão processadas pela IA Gemini e respondidas automaticamente!
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-success btn-lg">
+                        <i class="fas fa-arrow-right me-2"></i>Ir para o Sistema
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function testEvolutionAPI() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testando...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/test-evolution');
+        const data = await response.json();
+        
+        const results = document.getElementById('test-results');
+        if (data.success) {
+            results.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check me-2"></i>Evolution API conectada com sucesso!
+                    <pre class="mt-2">${JSON.stringify(data.data, null, 2)}</pre>
+                </div>
+            `;
+        } else {
+            results.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-times me-2"></i>Erro ao conectar: ${data.error}
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById('test-results').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times me-2"></i>Erro: ${error.message}
+            </div>
+        `;
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function createInstance() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Criando...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/create-evolution-instance', {method: 'POST'});
+        const data = await response.json();
+        
+        const results = document.getElementById('test-results');
+        if (data.success) {
+            results.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check me-2"></i>Instância criada com sucesso!
+                </div>
+            `;
+        } else {
+            results.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>${data.error}
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById('test-results').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times me-2"></i>Erro: ${error.message}
+            </div>
+        `;
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function getStatus() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/connection_status');
+        const data = await response.json();
+        
+        const results = document.getElementById('test-results');
+        results.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>Status atual:
+                <pre class="mt-2">${JSON.stringify(data, null, 2)}</pre>
+            </div>
+        `;
+    } catch (error) {
+        document.getElementById('test-results').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-times me-2"></i>Erro: ${error.message}
+            </div>
+        `;
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+</script>
+{% endblock %}

@@ -7,6 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app import app, db
 from models import Conversation, Message, AutoResponse, SystemSettings, WhatsAppConnection
 from whatsapp_service import whatsapp_service, simulate_incoming_messages
+from evolution_api_service import evolution_service
 
 # Admin credentials (in production, use proper user management)
 ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "admin123"))
@@ -53,6 +54,95 @@ def connection_status():
 def whatsapp_apis():
     """Página explicativa sobre APIs WhatsApp disponíveis"""
     return render_template('whatsapp_apis.html')
+
+@app.route('/evolution-setup')
+def evolution_setup():
+    """Página de configuração da Evolution API"""
+    return render_template('evolution_setup.html')
+
+@app.route('/api/test-evolution')
+def test_evolution():
+    """Testar conexão com Evolution API"""
+    try:
+        status = evolution_service.get_connection_state()
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/create-evolution-instance', methods=['POST'])
+def create_evolution_instance():
+    """Criar instância na Evolution API"""
+    try:
+        result = evolution_service.create_instance()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/webhook/evolution', methods=['POST'])
+def evolution_webhook():
+    """Webhook para receber eventos da Evolution API"""
+    try:
+        data = request.get_json()
+        event = data.get('event')
+        instance = data.get('instance')
+        
+        logging.info(f"Webhook Evolution recebido: {event}")
+        
+        if event == 'qrcode.updated':
+            # QR Code atualizado
+            qr_code = data.get('data', {}).get('qrcode')
+            if qr_code:
+                with app.app_context():
+                    connection = WhatsAppConnection.query.first()
+                    if not connection:
+                        connection = WhatsAppConnection()
+                        db.session.add(connection)
+                    
+                    connection.qr_code = qr_code
+                    connection.is_connected = False
+                    db.session.commit()
+                    
+        elif event == 'connection.update':
+            # Status de conexão atualizado
+            state = data.get('data', {}).get('state')
+            
+            with app.app_context():
+                connection = WhatsAppConnection.query.first()
+                if not connection:
+                    connection = WhatsAppConnection()
+                    db.session.add(connection)
+                
+                if state == 'open':
+                    connection.is_connected = True
+                    connection.last_connected = datetime.utcnow()
+                    connection.qr_code = None
+                    logging.info("WhatsApp conectado via Evolution API!")
+                else:
+                    connection.is_connected = False
+                    
+                db.session.commit()
+                
+        elif event == 'messages.upsert':
+            # Nova mensagem recebida
+            messages = data.get('data', {}).get('messages', [])
+            
+            for msg in messages:
+                if not msg.get('key', {}).get('fromMe', False):
+                    # Mensagem recebida (não enviada por nós)
+                    phone = msg.get('key', {}).get('remoteJid', '').replace('@s.whatsapp.net', '')
+                    message_text = msg.get('message', {}).get('conversation') or \
+                                 msg.get('message', {}).get('extendedTextMessage', {}).get('text', '')
+                    contact_name = msg.get('pushName', '')
+                    
+                    if message_text and phone:
+                        logging.info(f"Mensagem recebida via Evolution API: {phone} - {message_text}")
+                        whatsapp_service.process_incoming_message(phone, message_text, contact_name)
+        
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        logging.error(f"Erro no webhook Evolution: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():

@@ -22,16 +22,24 @@
                     {% if connection_status.is_connected %}
                         <div class="alert alert-success">
                             <i class="fas fa-check-circle fa-2x mb-2"></i>
-                            <h5>Conectado ao WhatsApp!</h5>
+                            <h5>WhatsApp Conectado via Evolution API!</h5>
                             <p class="mb-0">
                                 Última conexão: {{ connection_status.last_connected.strftime('%d/%m/%Y %H:%M') if connection_status.last_connected else 'Agora' }}
                             </p>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle fa-2x mb-2"></i>
+                            <h5>Evolution API não configurada</h5>
+                            <p>Configure a Evolution API para conectar ao WhatsApp real</p>
+                            <a href="{{ url_for('evolution_setup') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-rocket me-2"></i>Configurar Evolution API
+                            </a>
                         </div>
                     {% else %}
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
                             <h5>WhatsApp Desconectado</h5>
-                            <p>Escaneie o código QR abaixo para conectar</p>
+                            <p>Conectando via <strong>Evolution API</strong> - Escaneie o código QR</p>
                             
                             <div id="qr-code-container" class="mt-4">
                                 {% if connection_status.qr_code %}
@@ -63,7 +71,7 @@
                     <div class="card-body text-center">
                         <i class="fas fa-robot fa-3x text-primary mb-3"></i>
                         <h5>Respostas Inteligentes</h5>
-                        <p class="text-muted">IA avançada com Gemini para respostas naturais e contextuais</p>
+                        <p class="text-muted">IA Google Gemini + Evolution API para respostas reais no WhatsApp</p>
                     </div>
                 </div>
             </div>

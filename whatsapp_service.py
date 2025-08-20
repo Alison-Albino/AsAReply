@@ -3,10 +3,12 @@ import time
 import logging
 import threading
 import base64
+import asyncio
 from datetime import datetime
 from app import app, db
 from models import WhatsAppConnection, Conversation, Message, AutoResponse
 from ai_service import generate_ai_response, analyze_message_intent
+from evolution_api_service import evolution_service
 
 class WhatsAppService:
     """Service for managing WhatsApp integration"""
@@ -16,23 +18,39 @@ class WhatsAppService:
         self.typing_threads = {}  # Track typing threads by conversation
         
     def generate_qr_code(self):
-        """Generate QR code for WhatsApp Web connection"""
-        # In a real implementation, this would integrate with whatsapp-web.js
-        # For now, we'll simulate QR code generation
-        qr_data = f"whatsapp-connection-{int(time.time())}"
-        qr_base64 = base64.b64encode(qr_data.encode()).decode()
-        
-        with app.app_context():
-            connection = WhatsAppConnection.query.first()
-            if not connection:
-                connection = WhatsAppConnection()
-                db.session.add(connection)
+        """Generate QR code usando Evolution API"""
+        try:
+            # Primeiro, criar/verificar instância
+            instance_result = evolution_service.create_instance()
+            if not instance_result.get('success'):
+                logging.warning("Tentando obter QR de instância existente...")
             
-            connection.qr_code = qr_base64
-            connection.is_connected = False
-            db.session.commit()
-        
-        return qr_base64
+            # Obter QR Code
+            qr_result = evolution_service.get_qr_code()
+            
+            if qr_result.get('success'):
+                qr_code = qr_result.get('qr_code', '')
+                qr_base64 = qr_result.get('qr_base64', '')
+                
+                with app.app_context():
+                    connection = WhatsAppConnection.query.first()
+                    if not connection:
+                        connection = WhatsAppConnection()
+                        db.session.add(connection)
+                    
+                    connection.qr_code = qr_base64 or qr_code
+                    connection.is_connected = False
+                    db.session.commit()
+                
+                logging.info("QR Code obtido da Evolution API")
+                return qr_base64 or qr_code
+            else:
+                logging.error(f"Erro ao obter QR Code: {qr_result.get('error')}")
+                return None
+                
+        except Exception as e:
+            logging.error(f"Erro ao gerar QR Code: {e}")
+            return None
     
     def simulate_connection(self):
         """Simulate WhatsApp connection - removed auto-connection"""
@@ -123,32 +141,91 @@ class WhatsAppService:
         return generate_ai_response(message_content, recent_messages[::-1])
     
     def send_response(self, conversation: Conversation, response_text: str):
-        """Send response message"""
-        # In real implementation, this would send via WhatsApp API
-        response_message = Message()
-        response_message.conversation_id = conversation.id
-        response_message.content = response_text
-        response_message.is_from_user = False
-        response_message.message_type = 'text'
-        response_message.response_type = 'ai'  # or 'standard' based on generation method
-        
-        db.session.add(response_message)
-        conversation.updated_at = datetime.utcnow()
-        db.session.commit()
-        
-        logging.info(f"Response sent to {conversation.phone_number}: {response_text[:50]}...")
+        """Send response message usando Evolution API"""
+        try:
+            # Simular digitação antes de enviar
+            evolution_service.set_typing(conversation.phone_number, True)
+            
+            # Aguardar um pouco para simular digitação
+            time.sleep(2)
+            
+            # Enviar mensagem via Evolution API
+            send_result = evolution_service.send_message(conversation.phone_number, response_text)
+            
+            # Parar digitação
+            evolution_service.set_typing(conversation.phone_number, False)
+            
+            if send_result.get('success'):
+                # Salvar no banco apenas se envio foi bem-sucedido
+                response_message = Message()
+                response_message.conversation_id = conversation.id
+                response_message.content = response_text
+                response_message.is_from_user = False
+                response_message.message_type = 'text'
+                response_message.response_type = 'ai'
+                
+                db.session.add(response_message)
+                conversation.updated_at = datetime.utcnow()
+                db.session.commit()
+                
+                logging.info(f"Mensagem enviada via Evolution API para {conversation.phone_number}")
+            else:
+                logging.error(f"Erro ao enviar via Evolution API: {send_result.get('error')}")
+                
+        except Exception as e:
+            logging.error(f"Erro ao enviar resposta: {e}")
     
     def get_connection_status(self):
-        """Get current connection status"""
+        """Get current connection status da Evolution API"""
         with app.app_context():
             connection = WhatsAppConnection.query.first()
-            if connection:
+            if not connection:
+                connection = WhatsAppConnection()
+                db.session.add(connection)
+                db.session.commit()
+            
+            # Tentar verificar status na Evolution API (sem logs de erro se não estiver configurada)
+            try:
+                api_status = evolution_service.get_connection_state()
+                
+                if api_status.get('success'):
+                    api_data = api_status.get('data', {})
+                    state = api_data.get('state', 'close')
+                    
+                    # Atualizar status no banco
+                    connection.is_connected = state == 'open'
+                    if state == 'open':
+                        connection.last_connected = datetime.utcnow()
+                        connection.qr_code = None
+                    
+                    db.session.commit()
+                    
+                    return {
+                        'is_connected': connection.is_connected,
+                        'qr_code': connection.qr_code,
+                        'last_connected': connection.last_connected,
+                        'api_state': state,
+                        'evolution_api_available': True
+                    }
+                else:
+                    return {
+                        'is_connected': connection.is_connected,
+                        'qr_code': connection.qr_code,
+                        'last_connected': connection.last_connected,
+                        'api_state': 'disconnected',
+                        'evolution_api_available': False,
+                        'evolution_error': api_status.get('error', 'API não disponível')
+                    }
+                    
+            except Exception:
+                # Fallback para status local se Evolution API não estiver disponível
                 return {
                     'is_connected': connection.is_connected,
                     'qr_code': connection.qr_code,
-                    'last_connected': connection.last_connected
+                    'last_connected': connection.last_connected,
+                    'api_state': 'not_configured',
+                    'evolution_api_available': False
                 }
-            return {'is_connected': False, 'qr_code': None, 'last_connected': None}
 
 # Global service instance
 whatsapp_service = WhatsAppService()
