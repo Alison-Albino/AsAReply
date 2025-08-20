@@ -1,0 +1,324 @@
+/* Custom CSS for AsA WhatsApp System */
+
+:root {
+    --asa-primary: #25d366;
+    --asa-secondary: #128c7e;
+    --asa-accent: #075e54;
+    --asa-light: #dcf8c6;
+}
+
+/* Custom WhatsApp-inspired colors */
+.text-whatsapp {
+    color: var(--asa-primary) !important;
+}
+
+.bg-whatsapp {
+    background-color: var(--asa-primary) !important;
+}
+
+.btn-whatsapp {
+    background-color: var(--asa-primary);
+    border-color: var(--asa-primary);
+    color: white;
+}
+
+.btn-whatsapp:hover {
+    background-color: var(--asa-secondary);
+    border-color: var(--asa-secondary);
+    color: white;
+}
+
+/* QR Code display styling */
+.qr-code-display {
+    padding: 2rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: inline-block;
+    text-align: center;
+    min-width: 200px;
+}
+
+#qr-code-container {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Connection status indicators */
+.connection-indicator {
+    position: relative;
+}
+
+.connection-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -10px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--bs-success);
+    animation: pulse 2s infinite;
+}
+
+.connection-indicator.disconnected::before {
+    background-color: var(--bs-danger);
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); opacity: 1; }
+    70% { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(0.95); opacity: 1; }
+}
+
+/* Message bubbles for conversation view */
+.message-bubble {
+    max-width: 80%;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    border-radius: 18px;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.message-from-user {
+    background-color: var(--asa-light);
+    color: #000;
+    margin-left: auto;
+    margin-right: 0;
+    text-align: right;
+}
+
+.message-from-bot {
+    background-color: var(--bs-light);
+    color: var(--bs-dark);
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.message-timestamp {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 0.25rem;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background-color: var(--bs-light);
+    border-radius: 18px;
+    margin: 0.5rem 0;
+    width: fit-content;
+}
+
+.typing-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--bs-secondary);
+    animation: typingAnimation 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingAnimation {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+    30% {
+        transform: translateY(-10px);
+        opacity: 1;
+    }
+}
+
+/* Admin dashboard enhancements */
+.stats-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stats-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+/* Response cards */
+.response-card {
+    transition: transform 0.2s ease-in-out;
+    border-left: 4px solid var(--asa-primary);
+}
+
+.response-card:hover {
+    transform: translateY(-2px);
+}
+
+.response-preview {
+    max-height: 120px;
+    overflow: hidden;
+    position: relative;
+}
+
+.response-preview::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 20px;
+    width: 100%;
+    background: linear-gradient(transparent, var(--bs-body-bg));
+}
+
+/* Loading states */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    color: var(--asa-primary);
+    font-size: 3rem;
+}
+
+/* Toast container positioning */
+.toast-container {
+    z-index: 1055;
+}
+
+.toast {
+    min-width: 300px;
+}
+
+/* Form enhancements */
+.form-floating .form-control:focus ~ label {
+    color: var(--asa-primary);
+}
+
+.form-control:focus {
+    border-color: var(--asa-primary);
+    box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
+}
+
+/* Button enhancements */
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    background-color: var(--asa-primary);
+    border-color: var(--asa-primary);
+}
+
+/* Table improvements */
+.table-hover tbody tr:hover {
+    background-color: rgba(37, 211, 102, 0.1);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .qr-code-display {
+        padding: 1rem;
+        min-width: 150px;
+    }
+    
+    .message-bubble {
+        max-width: 90%;
+    }
+    
+    .stats-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Accessibility improvements */
+.btn:focus,
+.form-control:focus,
+.nav-link:focus {
+    outline: 2px solid var(--asa-primary);
+    outline-offset: 2px;
+}
+
+/* Animation for page transitions */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Status badges */
+.badge {
+    font-size: 0.75em;
+    font-weight: 500;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bs-light);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--asa-primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--asa-secondary);
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .modal,
+    .toast-container {
+        display: none !important;
+    }
+    
+    .container {
+        max-width: none !important;
+    }
+}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fab fa-whatsapp text-success"></i>
+                Sistema AsA
+            </h1>
+            <p class="lead text-muted">Sistema de Respostas Automáticas para WhatsApp com IA</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-wifi me-2"></i>Status da Conexão WhatsApp
+                </h4>
+            </div>
+            <div class="card-body text-center">
+                <div id="connection-status">
+                    {% if connection_status.is_connected %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <h5>Conectado ao WhatsApp!</h5>
+                            <p class="mb-0">
+                                Última conexão: {{ connection_status.last_connected.strftime('%d/%m/%Y %H:%M') if connection_status.last_connected else 'Agora' }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <h5>WhatsApp Desconectado</h5>
+                            <p>Escaneie o código QR abaixo para conectar</p>
+                            
+                            <div id="qr-code-container" class="mt-4">
+                                {% if connection_status.qr_code %}
+                                    <div class="p-4 bg-white rounded d-inline-block">
+                                        <div id="qr-display" class="text-dark">
+                                            <i class="fas fa-qrcode fa-5x"></i>
+                                            <p class="mt-2 mb-0">QR Code: {{ connection_status.qr_code[:20] }}...</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <button id="generate-qr-btn" class="btn btn-primary btn-lg mt-3">
+                                <i class="fas fa-sync-alt me-2"></i>Gerar Código QR
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-robot fa-3x text-primary mb-3"></i>
+                        <h5>Respostas Inteligentes</h5>
+                        <p class="text-muted">IA avançada com Gemini para respostas naturais e contextuais</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-comments fa-3x text-success mb-3"></i>
+                        <h5>Gestão Completa</h5>
+                        <p class="text-muted">Visualize e gerencie todas as conversas através do painel admin</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-keyboard fa-3x text-info mb-3"></i>
+                        <h5>Simulação de Digitação</h5>
+                        <p class="text-muted">Experiência natural com indicador "digitando..." automático</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Message Section (only for testing) -->
+        {% if not connection_status.is_connected %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-flask me-2"></i>Teste do Sistema
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Simule o recebimento de uma mensagem para testar o sistema:</p>
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" id="test-message" class="form-control" 
+                               placeholder="Digite uma mensagem de teste..." value="Olá, preciso de ajuda">
+                    </div>
+                    <div class="col-md-4">
+                        <button id="send-test-btn" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-paper-plane me-1"></i>Enviar Teste
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Auto-refresh connection status
+setInterval(function() {
+    fetch('/connection_status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_connected) {
+                location.reload();
+            }
+        });
+}, 5000);
+
+// Generate QR Code
+document.getElementById('generate-qr-btn')?.addEventListener('click', function() {
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando...';
+    this.disabled = true;
+    
+    fetch('/generate_qr')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('qr-display').innerHTML = `
+                <i class="fas fa-qrcode fa-5x"></i>
+                <p class="mt-2 mb-0">QR Code: ${data.qr_code.substring(0, 20)}...</p>
+                <small class="text-muted">Escaneie com seu WhatsApp</small>
+            `;
+            this.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Gerar Novo Código';
+            this.disabled = false;
+        });
+});
+
+// Send test message
+document.getElementById('send-test-btn')?.addEventListener('click', function() {
+    const message = document.getElementById('test-message').value;
+    
+    fetch('/api/simulate_message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            phone: '5511999999999',
+            message: message,
+            name: 'Usuário Teste'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showAlert('Mensagem de teste enviada com sucesso!', 'success');
+        }
+    });
+});
+</script>
+{% endblock %}

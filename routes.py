@@ -1,0 +1,201 @@
+import os
+import logging
+import threading
+from flask import render_template, request, redirect, url_for, session, jsonify, flash
+from werkzeug.security import check_password_hash, generate_password_hash
+from app import app, db
+from models import Conversation, Message, AutoResponse, SystemSettings, WhatsAppConnection
+from whatsapp_service import whatsapp_service, simulate_incoming_messages
+
+# Admin credentials (in production, use proper user management)
+ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "admin123"))
+
+@app.route('/')
+def index():
+    """Main page showing WhatsApp connection status"""
+    connection_status = whatsapp_service.get_connection_status()
+    return render_template('index.html', connection_status=connection_status)
+
+@app.route('/generate_qr')
+def generate_qr():
+    """Generate new QR code for WhatsApp connection"""
+    qr_code = whatsapp_service.generate_qr_code()
+    
+    # Start connection simulation in background
+    threading.Thread(target=whatsapp_service.simulate_connection, daemon=True).start()
+    
+    # Start test message simulation
+    simulate_incoming_messages()
+    
+    return jsonify({'qr_code': qr_code})
+
+@app.route('/connection_status')
+def connection_status():
+    """Get current connection status"""
+    status = whatsapp_service.get_connection_status()
+    return jsonify(status)
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        if password and check_password_hash(ADMIN_PASSWORD_HASH, password):
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Senha incorreta', 'error')
+    
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('index'))
+
+def admin_required(f):
+    """Decorator to require admin login"""
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard"""
+    # Get statistics
+    total_conversations = Conversation.query.count()
+    total_messages = Message.query.count()
+    active_responses = AutoResponse.query.filter_by(is_active=True).count()
+    
+    recent_conversations = Conversation.query.order_by(
+        Conversation.updated_at.desc()
+    ).limit(5).all()
+    
+    stats = {
+        'total_conversations': total_conversations,
+        'total_messages': total_messages,
+        'active_responses': active_responses,
+        'recent_conversations': recent_conversations
+    }
+    
+    return render_template('admin_dashboard.html', stats=stats)
+
+@app.route('/admin/conversations')
+@admin_required
+def admin_conversations():
+    """View all conversations"""
+    page = request.args.get('page', 1, type=int)
+    conversations = Conversation.query.order_by(
+        Conversation.updated_at.desc()
+    ).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    
+    return render_template('conversations.html', conversations=conversations)
+
+@app.route('/admin/conversation/<int:conversation_id>')
+@admin_required
+def view_conversation(conversation_id):
+    """View specific conversation details"""
+    conversation = Conversation.query.get_or_404(conversation_id)
+    messages = Message.query.filter_by(
+        conversation_id=conversation_id
+    ).order_by(Message.timestamp.asc()).all()
+    
+    return render_template('conversation_detail.html', 
+                         conversation=conversation, messages=messages)
+
+@app.route('/admin/conversation/<int:conversation_id>/delete', methods=['POST'])
+@admin_required
+def delete_conversation(conversation_id):
+    """Delete a conversation"""
+    conversation = Conversation.query.get_or_404(conversation_id)
+    db.session.delete(conversation)
+    db.session.commit()
+    flash('Conversa excluída com sucesso', 'success')
+    return redirect(url_for('admin_conversations'))
+
+@app.route('/admin/responses')
+@admin_required
+def admin_responses():
+    """Manage auto responses"""
+    responses = AutoResponse.query.order_by(AutoResponse.created_at.desc()).all()
+    return render_template('responses.html', responses=responses)
+
+@app.route('/admin/responses/add', methods=['GET', 'POST'])
+@admin_required
+def add_response():
+    """Add new auto response"""
+    if request.method == 'POST':
+        trigger_keyword = request.form.get('trigger_keyword')
+        response_text = request.form.get('response_text')
+        is_active = request.form.get('is_active') == 'on'
+        
+        response = AutoResponse()
+        response.trigger_keyword = trigger_keyword
+        response.response_text = response_text
+        response.is_active = is_active
+        
+        try:
+            db.session.add(response)
+            db.session.commit()
+            flash('Resposta automática adicionada com sucesso', 'success')
+            return redirect(url_for('admin_responses'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Erro ao adicionar resposta: palavra-chave já existe', 'error')
+    
+    return render_template('add_response.html')
+
+@app.route('/admin/responses/<int:response_id>/edit', methods=['GET', 'POST'])
+@admin_required
+def edit_response(response_id):
+    """Edit auto response"""
+    response = AutoResponse.query.get_or_404(response_id)
+    
+    if request.method == 'POST':
+        response.trigger_keyword = request.form.get('trigger_keyword')
+        response.response_text = request.form.get('response_text')
+        response.is_active = request.form.get('is_active') == 'on'
+        
+        try:
+            db.session.commit()
+            flash('Resposta automática atualizada com sucesso', 'success')
+            return redirect(url_for('admin_responses'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Erro ao atualizar resposta', 'error')
+    
+    return render_template('edit_response.html', response=response)
+
+@app.route('/admin/responses/<int:response_id>/delete', methods=['POST'])
+@admin_required
+def delete_response(response_id):
+    """Delete auto response"""
+    response = AutoResponse.query.get_or_404(response_id)
+    db.session.delete(response)
+    db.session.commit()
+    flash('Resposta automática excluída com sucesso', 'success')
+    return redirect(url_for('admin_responses'))
+
+@app.route('/api/simulate_message', methods=['POST'])
+def simulate_message():
+    """API endpoint to simulate incoming message (for testing)"""
+    data = request.get_json()
+    phone = data.get('phone', '5511999999999')
+    message = data.get('message', 'Teste')
+    name = data.get('name', 'Usuário Teste')
+    
+    whatsapp_service.process_incoming_message(phone, message, name)
+    
+    return jsonify({'status': 'success'})
+
+@app.context_processor
+def inject_admin_status():
+    """Inject admin login status into templates"""
+    return {'admin_logged_in': session.get('admin_logged_in', False)}

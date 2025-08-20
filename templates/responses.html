@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Respostas Automáticas - AsA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-robot me-2"></i>Respostas Automáticas
+    </h2>
+    <div>
+        <a href="{{ url_for('add_response') }}" class="btn btn-success me-2">
+            <i class="fas fa-plus me-2"></i>Nova Resposta
+        </a>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+{% if responses %}
+<div class="row">
+    {% for response in responses %}
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <span class="badge bg-primary me-2">{{ response.trigger_keyword }}</span>
+                    {% if response.is_active %}
+                        <span class="badge bg-success">Ativa</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inativa</span>
+                    {% endif %}
+                </h6>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('edit_response', response_id=response.id) }}">
+                                <i class="fas fa-edit me-2"></i>Editar
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item text-danger" 
+                                    onclick="confirmDelete({{ response.id }}, '{{ response.trigger_keyword }}')">
+                                <i class="fas fa-trash me-2"></i>Excluir
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="response-preview">
+                    <p class="card-text">{{ response.response_text }}</p>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        Criada em {{ response.created_at.strftime('%d/%m/%Y %H:%M') }}
+                    </small>
+                    {% if response.updated_at != response.created_at %}
+                    <br>
+                    <small class="text-muted">
+                        <i class="fas fa-edit me-1"></i>
+                        Atualizada em {{ response.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-robot fa-5x text-muted mb-4"></i>
+    <h4>Nenhuma resposta automática configurada</h4>
+    <p class="text-muted mb-4">Configure respostas automáticas para palavras-chave específicas.</p>
+    <a href="{{ url_for('add_response') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Criar Primeira Resposta
+    </a>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a resposta automática para <strong id="keywordName"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-warning me-1"></i>
+                    Esta ação não pode ser desfeita.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Response Modal Template -->
+<div class="modal fade" id="addResponseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Nova Resposta Automática
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_response') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="trigger_keyword" class="form-label">Palavra-chave</label>
+                        <input type="text" class="form-control" id="trigger_keyword" name="trigger_keyword" 
+                               placeholder="Ex: olá, ajuda, preço..." required>
+                        <div class="form-text">Palavra ou frase que irá ativar esta resposta</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="response_text" class="form-label">Texto da Resposta</label>
+                        <textarea class="form-control" id="response_text" name="response_text" 
+                                  rows="4" placeholder="Digite a resposta automática..." required></textarea>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                        <label class="form-check-label" for="is_active">
+                            Ativar resposta automática
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function confirmDelete(responseId, keyword) {
+    document.getElementById('keywordName').textContent = keyword;
+    document.getElementById('deleteForm').action = `/admin/responses/${responseId}/delete`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// Truncate long responses in preview
+document.addEventListener('DOMContentLoaded', function() {
+    const previews = document.querySelectorAll('.response-preview p');
+    previews.forEach(preview => {
+        if (preview.textContent.length > 100) {
+            const truncated = preview.textContent.substring(0, 100) + '...';
+            preview.textContent = truncated;
+            preview.title = preview.textContent; // Show full text on hover
+        }
+    });
+});
+</script>
+{% endblock %}

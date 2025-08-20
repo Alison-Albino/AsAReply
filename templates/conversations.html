@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Conversas - AsA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-comments me-2"></i>Gerenciar Conversas
+    </h2>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Voltar ao Dashboard
+    </a>
+</div>
+
+{% if conversations.items %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Contato</th>
+                        <th>Telefone</th>
+                        <th>Criada em</th>
+                        <th>Última Atividade</th>
+                        <th>Mensagens</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for conversation in conversations.items %}
+                    <tr>
+                        <td>
+                            <i class="fas fa-user me-2"></i>
+                            <strong>{{ conversation.contact_name or 'Sem nome' }}</strong>
+                        </td>
+                        <td>
+                            <span class="font-monospace">{{ conversation.phone_number }}</span>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ conversation.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            </small>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ conversation.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">
+                                {{ conversation.messages|length }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if conversation.is_active %}
+                                <span class="badge bg-success">Ativa</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inativa</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('view_conversation', conversation_id=conversation.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Ver conversa">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="confirmDelete({{ conversation.id }}, '{{ conversation.contact_name or conversation.phone_number }}')"
+                                        title="Excluir conversa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if conversations.pages > 1 %}
+<nav aria-label="Paginação das conversas" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if conversations.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_conversations', page=conversations.prev_num) }}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for page_num in conversations.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+                {% if page_num != conversations.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_conversations', page=page_num) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">…</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if conversations.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_conversations', page=conversations.next_num) }}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-comments fa-5x text-muted mb-4"></i>
+    <h4>Nenhuma conversa encontrada</h4>
+    <p class="text-muted">As conversas aparecerão aqui conforme os usuários interagirem com o sistema.</p>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir a conversa com <strong id="contactName"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-warning me-1"></i>
+                    Esta ação não pode ser desfeita e todas as mensagens serão perdidas.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Excluir
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function confirmDelete(conversationId, contactName) {
+    document.getElementById('contactName').textContent = contactName;
+    document.getElementById('deleteForm').action = `/admin/conversation/${conversationId}/delete`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}
