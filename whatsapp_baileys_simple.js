@@ -41,7 +41,7 @@ async function connectToWhatsApp() {
         socket = makeWASocket({
             auth: state,
             printQRInTerminal: false,
-            logger: { level: 'silent' },
+            // Remove logger config to use default
             browser: ['AsA WhatsApp Bot', 'Chrome', '1.0.0']
         });
 
