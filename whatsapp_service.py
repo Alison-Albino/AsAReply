@@ -90,11 +90,11 @@ class WhatsAppService:
         if phone_number not in self.message_queues:
             self.message_queues[phone_number] = []
         
-        # Add message to queue
+        # Add message to queue (save only conversation ID to avoid session issues)
         self.message_queues[phone_number].append({
             'content': message_content,
             'timestamp': datetime.utcnow(),
-            'conversation': conversation
+            'conversation_id': conversation.id
         })
         
         logging.info(f"📥 Mensagem adicionada à fila para {phone_number}. Total na fila: {len(self.message_queues[phone_number])}")
@@ -121,12 +121,18 @@ class WhatsAppService:
         with app.app_context():
             try:
                 messages = self.message_queues[phone_number].copy()
-                conversation = messages[0]['conversation']
+                conversation_id = messages[0]['conversation_id']
                 
                 # Clear the queue
                 self.message_queues[phone_number] = []
                 if phone_number in self.queue_timers:
                     del self.queue_timers[phone_number]
+                
+                # Get fresh conversation object from database in this session
+                conversation = Conversation.query.get(conversation_id)
+                if not conversation:
+                    logging.error(f"Conversa não encontrada: {conversation_id}")
+                    return
                 
                 logging.info(f"🔄 Processando fila de {len(messages)} mensagens para {phone_number}")
                 
@@ -143,8 +149,13 @@ class WhatsAppService:
                 
             except Exception as e:
                 logging.error(f"Erro ao processar fila de mensagens: {e}")
-                # Fallback response
-                self.send_response(conversation, "Desculpe, estou com alguns problemas técnicos. Tente novamente!")
+                # Try to get conversation for fallback
+                try:
+                    conversation = Conversation.query.filter_by(phone_number=phone_number).first()
+                    if conversation:
+                        self.send_response(conversation, "Desculpe, estou com alguns problemas técnicos. Tente novamente!")
+                except:
+                    logging.error(f"Não foi possível enviar mensagem de fallback para {phone_number}")
     
     def process_incoming_message(self, phone_number: str, message_content: str, contact_name: str = ""):
         """Process incoming WhatsApp message with queue system"""
