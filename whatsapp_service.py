@@ -16,6 +16,9 @@ class WhatsAppService:
     def __init__(self):
         self.is_connected = False
         self.typing_threads = {}  # Track typing threads by conversation
+        self.message_queues = {}  # Queue of messages per user
+        self.queue_timers = {}    # Timers for processing queues
+        self.QUEUE_WAIT_TIME = 8   # Seconds to wait for additional messages
         
     def generate_qr_code(self):
         """Generate QR code usando Baileys local"""
@@ -81,8 +84,70 @@ class WhatsAppService:
             self.typing_threads[phone_number] = None
             logging.info(f"Typing simulation interrupted for {phone_number}")
     
+    def add_message_to_queue(self, phone_number: str, message_content: str, conversation: Conversation):
+        """Add message to queue and manage timer"""
+        # Initialize queue if not exists
+        if phone_number not in self.message_queues:
+            self.message_queues[phone_number] = []
+        
+        # Add message to queue
+        self.message_queues[phone_number].append({
+            'content': message_content,
+            'timestamp': datetime.utcnow(),
+            'conversation': conversation
+        })
+        
+        logging.info(f"📥 Mensagem adicionada à fila para {phone_number}. Total na fila: {len(self.message_queues[phone_number])}")
+        
+        # Cancel existing timer if any
+        if phone_number in self.queue_timers:
+            self.queue_timers[phone_number].cancel()
+        
+        # Start typing simulation
+        self.start_typing_simulation(phone_number)
+        
+        # Create new timer
+        timer = threading.Timer(self.QUEUE_WAIT_TIME, self.process_message_queue, [phone_number])
+        self.queue_timers[phone_number] = timer
+        timer.start()
+        
+        logging.info(f"⏱️ Timer iniciado para {phone_number} ({self.QUEUE_WAIT_TIME}s)")
+    
+    def process_message_queue(self, phone_number: str):
+        """Process all queued messages for a user"""
+        if phone_number not in self.message_queues or not self.message_queues[phone_number]:
+            return
+        
+        with app.app_context():
+            try:
+                messages = self.message_queues[phone_number].copy()
+                conversation = messages[0]['conversation']
+                
+                # Clear the queue
+                self.message_queues[phone_number] = []
+                if phone_number in self.queue_timers:
+                    del self.queue_timers[phone_number]
+                
+                logging.info(f"🔄 Processando fila de {len(messages)} mensagens para {phone_number}")
+                
+                # Combine all messages into context
+                combined_messages = []
+                for msg in messages:
+                    combined_messages.append(msg['content'])
+                
+                # Generate single response for all messages
+                response_text = self.generate_response_for_queue(combined_messages, conversation)
+                
+                # Send response
+                self.send_response(conversation, response_text)
+                
+            except Exception as e:
+                logging.error(f"Erro ao processar fila de mensagens: {e}")
+                # Fallback response
+                self.send_response(conversation, "Desculpe, estou com alguns problemas técnicos. Tente novamente!")
+    
     def process_incoming_message(self, phone_number: str, message_content: str, contact_name: str = ""):
-        """Process incoming WhatsApp message"""
+        """Process incoming WhatsApp message with queue system"""
         with app.app_context():
             # Stop any ongoing typing simulation
             self.stop_typing_simulation(phone_number)
@@ -105,17 +170,11 @@ class WhatsAppService:
             db.session.add(incoming_message)
             db.session.commit()
             
-            # Start typing simulation
-            self.start_typing_simulation(phone_number)
-            
-            # Generate response
-            response_text = self.generate_response(message_content, conversation)
-            
-            # Save and send response
-            self.send_response(conversation, response_text)
+            # Add message to queue
+            self.add_message_to_queue(phone_number, message_content, conversation)
     
     def generate_response(self, message_content: str, conversation: Conversation) -> str:
-        """Generate AI response using custom prompt for ALL messages"""
+        """Generate AI response using custom prompt for single message"""
         try:
             # Get recent conversation history for context
             recent_messages = Message.query.filter_by(
@@ -128,6 +187,32 @@ class WhatsAppService:
         except Exception as e:
             logging.error(f"Erro ao gerar resposta: {e}")
             return "Olá! Estou passando por alguns ajustes técnicos. Que tal tentar novamente em alguns minutos?"
+    
+    def generate_response_for_queue(self, messages_list: list, conversation: Conversation) -> str:
+        """Generate AI response for multiple queued messages"""
+        try:
+            # Get recent conversation history for context
+            recent_messages = Message.query.filter_by(
+                conversation_id=conversation.id
+            ).order_by(Message.timestamp.desc()).limit(10).all()
+            
+            # Combine all queued messages into a single context
+            if len(messages_list) == 1:
+                combined_message = messages_list[0]
+            else:
+                combined_message = f"O usuário enviou {len(messages_list)} mensagens seguidas:\n\n"
+                for i, msg in enumerate(messages_list, 1):
+                    combined_message += f"Mensagem {i}: {msg}\n"
+                combined_message += f"\nPor favor, responda considerando todas essas {len(messages_list)} mensagens de forma integrada."
+            
+            logging.info(f"🤖 Gerando resposta IA para {len(messages_list)} mensagens combinadas")
+            
+            # Generate AI response using custom prompt
+            return generate_ai_response(combined_message, recent_messages[::-1])
+            
+        except Exception as e:
+            logging.error(f"Erro ao gerar resposta para fila: {e}")
+            return "Olá! Vi que você enviou algumas mensagens. Estou com problemas técnicos no momento, mas vou retornar assim que possível!"
     
     def send_response(self, conversation: Conversation, response_text: str):
         """Send response message usando Baileys"""
