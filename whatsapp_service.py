@@ -8,7 +8,7 @@ from datetime import datetime
 from app import app, db
 from models import WhatsAppConnection, Conversation, Message, AutoResponse
 from ai_service import generate_ai_response, analyze_message_intent
-from evolution_api_service import evolution_service
+from baileys_service import baileys_service
 
 class WhatsAppService:
     """Service for managing WhatsApp integration"""
@@ -18,19 +18,19 @@ class WhatsAppService:
         self.typing_threads = {}  # Track typing threads by conversation
         
     def generate_qr_code(self):
-        """Generate QR code usando Evolution API"""
+        """Generate QR code usando Baileys local"""
         try:
-            # Primeiro, criar/verificar instância
-            instance_result = evolution_service.create_instance()
-            if not instance_result.get('success'):
-                logging.warning("Tentando obter QR de instância existente...")
+            logging.info("📱 Gerando QR Code...")
             
-            # Obter QR Code
-            qr_result = evolution_service.get_qr_code()
+            # Aguardar um pouco para o serviço estar pronto
+            time.sleep(2)
+            
+            # Obter QR Code do serviço Baileys
+            qr_result = baileys_service.get_qr_code()
             
             if qr_result.get('success'):
                 qr_code = qr_result.get('qr_code', '')
-                qr_base64 = qr_result.get('qr_base64', '')
+                qr_base64 = qr_result.get('qr_image', '')
                 
                 with app.app_context():
                     connection = WhatsAppConnection.query.first()
@@ -42,10 +42,10 @@ class WhatsAppService:
                     connection.is_connected = False
                     db.session.commit()
                 
-                logging.info("QR Code obtido da Evolution API")
+                logging.info("✅ QR Code gerado com sucesso!")
                 return qr_base64 or qr_code
             else:
-                logging.error(f"Erro ao obter QR Code: {qr_result.get('error')}")
+                logging.warning(f"QR Code ainda não está pronto: {qr_result.get('message', 'Aguardando...')}")
                 return None
                 
         except Exception as e:
@@ -141,19 +141,19 @@ class WhatsAppService:
         return generate_ai_response(message_content, recent_messages[::-1])
     
     def send_response(self, conversation: Conversation, response_text: str):
-        """Send response message usando Evolution API"""
+        """Send response message usando Baileys"""
         try:
             # Simular digitação antes de enviar
-            evolution_service.set_typing(conversation.phone_number, True)
+            baileys_service.set_typing(conversation.phone_number, True)
             
             # Aguardar um pouco para simular digitação
             time.sleep(2)
             
-            # Enviar mensagem via Evolution API
-            send_result = evolution_service.send_message(conversation.phone_number, response_text)
+            # Enviar mensagem via Baileys
+            send_result = baileys_service.send_message(conversation.phone_number, response_text)
             
             # Parar digitação
-            evolution_service.set_typing(conversation.phone_number, False)
+            baileys_service.set_typing(conversation.phone_number, False)
             
             if send_result.get('success'):
                 # Salvar no banco apenas se envio foi bem-sucedido
@@ -168,15 +168,15 @@ class WhatsAppService:
                 conversation.updated_at = datetime.utcnow()
                 db.session.commit()
                 
-                logging.info(f"Mensagem enviada via Evolution API para {conversation.phone_number}")
+                logging.info(f"📤 Mensagem enviada via Baileys para {conversation.phone_number}")
             else:
-                logging.error(f"Erro ao enviar via Evolution API: {send_result.get('error')}")
+                logging.error(f"❌ Erro ao enviar via Baileys: {send_result.get('error')}")
                 
         except Exception as e:
             logging.error(f"Erro ao enviar resposta: {e}")
     
     def get_connection_status(self):
-        """Get current connection status da Evolution API"""
+        """Get current connection status do Baileys"""
         with app.app_context():
             connection = WhatsAppConnection.query.first()
             if not connection:
@@ -184,17 +184,16 @@ class WhatsAppService:
                 db.session.add(connection)
                 db.session.commit()
             
-            # Tentar verificar status na Evolution API (sem logs de erro se não estiver configurada)
+            # Verificar status no serviço Baileys
             try:
-                api_status = evolution_service.get_connection_state()
+                baileys_status = baileys_service.get_connection_status()
                 
-                if api_status.get('success'):
-                    api_data = api_status.get('data', {})
-                    state = api_data.get('state', 'close')
+                if baileys_status.get('success') != False:
+                    # Atualizar status no banco baseado no Baileys
+                    is_connected = baileys_status.get('connected', False)
                     
-                    # Atualizar status no banco
-                    connection.is_connected = state == 'open'
-                    if state == 'open':
+                    connection.is_connected = is_connected
+                    if is_connected:
                         connection.last_connected = datetime.utcnow()
                         connection.qr_code = None
                     
@@ -204,27 +203,30 @@ class WhatsAppService:
                         'is_connected': connection.is_connected,
                         'qr_code': connection.qr_code,
                         'last_connected': connection.last_connected,
-                        'api_state': state,
-                        'evolution_api_available': True
+                        'baileys_status': baileys_status.get('status', 'unknown'),
+                        'qr_available': baileys_status.get('qr_available', False),
+                        'user_info': baileys_status.get('user'),
+                        'service_running': True
                     }
                 else:
                     return {
-                        'is_connected': connection.is_connected,
+                        'is_connected': False,
                         'qr_code': connection.qr_code,
                         'last_connected': connection.last_connected,
-                        'api_state': 'disconnected',
-                        'evolution_api_available': False,
-                        'evolution_error': api_status.get('error', 'API não disponível')
+                        'baileys_status': 'service_error',
+                        'service_running': False,
+                        'error': baileys_status.get('error', 'Serviço não está rodando')
                     }
                     
-            except Exception:
-                # Fallback para status local se Evolution API não estiver disponível
+            except Exception as e:
+                # Fallback para status local
                 return {
                     'is_connected': connection.is_connected,
                     'qr_code': connection.qr_code,
                     'last_connected': connection.last_connected,
-                    'api_state': 'not_configured',
-                    'evolution_api_available': False
+                    'baileys_status': 'error',
+                    'service_running': False,
+                    'error': str(e)
                 }
 
 # Global service instance

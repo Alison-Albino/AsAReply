@@ -22,24 +22,26 @@
                     {% if connection_status.is_connected %}
                         <div class="alert alert-success">
                             <i class="fas fa-check-circle fa-2x mb-2"></i>
-                            <h5>WhatsApp Conectado via Evolution API!</h5>
+                            <h5>WhatsApp Conectado!</h5>
                             <p class="mb-0">
                                 Última conexão: {{ connection_status.last_connected.strftime('%d/%m/%Y %H:%M') if connection_status.last_connected else 'Agora' }}
                             </p>
+                            <p class="text-muted mt-2">Sistema pronto para receber e responder mensagens automaticamente</p>
                         </div>
+                    {% elif not connection_status.get('service_running', True) %}
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle fa-2x mb-2"></i>
-                            <h5>Evolution API não configurada</h5>
-                            <p>Configure a Evolution API para conectar ao WhatsApp real</p>
-                            <a href="{{ url_for('evolution_setup') }}" class="btn btn-primary mt-2">
-                                <i class="fas fa-rocket me-2"></i>Configurar Evolution API
-                            </a>
+                            <h5>Serviço WhatsApp Iniciando...</h5>
+                            <p>Aguarde enquanto o serviço WhatsApp é iniciado automaticamente</p>
+                            <button class="btn btn-primary mt-2" onclick="window.location.reload()">
+                                <i class="fas fa-sync me-2"></i>Atualizar Status
+                            </button>
                         </div>
                     {% else %}
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
                             <h5>WhatsApp Desconectado</h5>
-                            <p>Conectando via <strong>Evolution API</strong> - Escaneie o código QR</p>
+                            <p>Clique em <strong>"Gerar Código QR"</strong> e escaneie com seu WhatsApp</p>
                             
                             <div id="qr-code-container" class="mt-4">
                                 {% if connection_status.qr_code %}
@@ -71,7 +73,7 @@
                     <div class="card-body text-center">
                         <i class="fas fa-robot fa-3x text-primary mb-3"></i>
                         <h5>Respostas Inteligentes</h5>
-                        <p class="text-muted">IA Google Gemini + Evolution API para respostas reais no WhatsApp</p>
+                        <p class="text-muted">IA Google Gemini para respostas naturais e contextuais</p>
                     </div>
                 </div>
             </div>
