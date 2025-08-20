@@ -16,6 +16,9 @@ let isConnected = false;
 let connectionStatus = 'disconnected';
 let userInfo = null;
 
+// Rastrear mensagens enviadas automaticamente pelo sistema
+let sentBySystem = new Set();
+
 console.log('🚀 Iniciando WhatsApp Service...');
 
 // Função para notificar o Flask
@@ -122,17 +125,26 @@ async function connectToWhatsApp() {
                             is_from_user: true
                         });
                     } else {
-                        // Mensagem nossa para cliente (detectar resposta manual do humano)
-                        console.log(`👤 Resposta manual detectada para ${cleanPhone}: ${messageText}`);
+                        // Mensagem nossa para cliente - verificar se é manual ou automática
+                        const messageHash = `${cleanPhone}:${messageText}`;
                         
-                        // Notificar Flask que humano respondeu (pausar IA)
-                        await notifyFlask('/api/human-response-detected', {
-                            phone: cleanPhone,
-                            message: messageText,
-                            timestamp: new Date().toISOString(),
-                            is_from_user: false,
-                            is_manual: true
-                        });
+                        if (sentBySystem.has(messageHash)) {
+                            // Mensagem enviada automaticamente pelo sistema - remover do rastreamento
+                            sentBySystem.delete(messageHash);
+                            console.log(`🤖 Mensagem automática confirmada para ${cleanPhone}: ${messageText}`);
+                        } else {
+                            // Mensagem manual do humano - pausar IA
+                            console.log(`👤 Resposta manual detectada para ${cleanPhone}: ${messageText}`);
+                            
+                            // Notificar Flask que humano respondeu (pausar IA)
+                            await notifyFlask('/api/human-response-detected', {
+                                phone: cleanPhone,
+                                message: messageText,
+                                timestamp: new Date().toISOString(),
+                                is_from_user: false,
+                                is_manual: true
+                            });
+                        }
                     }
                 }
             }
@@ -187,9 +199,18 @@ app.post('/send-message', async (req, res) => {
             jid = `${cleanPhone}@s.whatsapp.net`;
         }
         
+        // Marcar como mensagem enviada pelo sistema
+        const messageHash = `${phone}:${message}`;
+        sentBySystem.add(messageHash);
+        
+        // Remover da lista após 30 segundos (timeout de segurança)
+        setTimeout(() => {
+            sentBySystem.delete(messageHash);
+        }, 30000);
+        
         await socket.sendMessage(jid, { text: message });
         
-        console.log(`📤 Mensagem enviada para ${phone}: ${message}`);
+        console.log(`🤖 Mensagem automática enviada para ${phone}: ${message}`);
         res.json({ success: true, message: 'Mensagem enviada' });
     } catch (error) {
         console.error('❌ Erro ao enviar mensagem:', error);
