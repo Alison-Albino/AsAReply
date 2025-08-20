@@ -16,7 +16,7 @@ ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "a
 def index():
     """Main page showing WhatsApp connection status"""
     connection_status = whatsapp_service.get_connection_status()
-    return render_template('index.html', connection_status=connection_status)
+    return render_template('index_simple.html', connection_status=connection_status)
 
 @app.route('/generate_qr')
 def generate_qr():
@@ -75,6 +75,15 @@ def baileys_status():
     try:
         status = baileys_service.get_connection_status()
         return jsonify(status)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/get-qr')
+def get_qr_code():
+    """Obter QR Code do Baileys para exibir na tela"""
+    try:
+        qr_result = baileys_service.get_qr_code()
+        return jsonify(qr_result)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
