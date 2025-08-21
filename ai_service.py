@@ -198,3 +198,41 @@ def analyze_message_intent(message: str) -> dict:
     except Exception as e:
         logging.error(f"Erro ao analisar intenção da mensagem: {e}")
         return {"tipo": "outro", "urgencia": "baixo", "requer_humano": False}
+
+def test_gemini_connection():
+    """Test Gemini API connection with a simple message"""
+    try:
+        import os
+        
+        # Check if API key exists
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return {"success": False, "error": "Chave API não configurada"}
+        
+        # Reinitialize client with new API key
+        global client
+        try:
+            from google import genai
+            client = genai.Client(api_key=api_key)
+        except Exception as e:
+            return {"success": False, "error": f"Erro ao inicializar cliente: {str(e)}"}
+        
+        # Test with a simple message
+        test_message = "Olá, teste de conexão"
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"Responda de forma simples e amigável em português: {test_message}"
+        )
+        
+        if response.text:
+            return {
+                "success": True, 
+                "response": response.text.strip()
+            }
+        else:
+            return {"success": False, "error": "Resposta vazia da API"}
+            
+    except Exception as e:
+        logging.error(f"Erro ao testar conexão Gemini: {e}")
+        return {"success": False, "error": str(e)}

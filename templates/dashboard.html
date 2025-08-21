@@ -438,8 +438,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAIConfig();
     checkApiKeyStatus();
     
-    // Auto-refresh connection status every 10 seconds
-    connectionStatusInterval = setInterval(updateConnectionStatus, 10000);
+    // Auto-refresh connection status every 15 seconds (reduced frequency)
+    connectionStatusInterval = setInterval(updateConnectionStatus, 15000);
 });
 
 // Connection Management
@@ -471,13 +471,16 @@ async function updateConnectionStatus() {
             disconnectBtn.style.display = 'inline-block';
             
             // Hide QR code when connected
-            document.getElementById('qr-display').innerHTML = `
-                <div class="text-success">
-                    <i class="fas fa-check-circle fa-3x"></i>
-                    <p class="mt-2">WhatsApp conectado com sucesso!</p>
-                </div>
-            `;
-            document.getElementById('generate-qr-btn').style.display = 'none';
+            const qrDisplay = document.getElementById('qr-display');
+            if (qrDisplay && !qrDisplay.innerHTML.includes('WhatsApp conectado')) {
+                qrDisplay.innerHTML = `
+                    <div class="text-success">
+                        <i class="fas fa-check-circle fa-3x"></i>
+                        <p class="mt-2">WhatsApp conectado com sucesso!</p>
+                    </div>
+                `;
+                document.getElementById('generate-qr-btn').style.display = 'none';
+            }
             
         } else if (data.service_running === false) {
             statusDisplay.innerHTML = `
@@ -502,19 +505,24 @@ async function updateConnectionStatus() {
             disconnectBtn.style.display = 'none';
             
             // Show QR generation when disconnected
-            if (!document.getElementById('qr-display').innerHTML.includes('img')) {
-                document.getElementById('qr-display').innerHTML = `
+            const qrDisplay = document.getElementById('qr-display');
+            if (qrDisplay && !qrDisplay.innerHTML.includes('img') && !qrDisplay.innerHTML.includes('Clique no botão')) {
+                qrDisplay.innerHTML = `
                     <div class="text-muted">
                         <i class="fas fa-qrcode fa-3x"></i>
                         <p class="mt-3">Clique no botão abaixo para conectar</p>
                     </div>
                 `;
             }
-            document.getElementById('generate-qr-btn').style.display = 'inline-block';
+            const generateBtn = document.getElementById('generate-qr-btn');
+            if (generateBtn) {
+                generateBtn.style.display = 'inline-block';
+            }
         }
         
     } catch (error) {
         console.error('Erro ao verificar status:', error);
+        // Don't update display on error to avoid flickering
     }
 }
 
@@ -549,24 +557,31 @@ async function loadQRCode() {
         const data = await response.json();
         
         if (data.success && data.qr_image) {
-            document.getElementById('qr-display').innerHTML = `
-                <div class="p-3 bg-white rounded border shadow-sm">
-                    <img src="${data.qr_image}" alt="QR Code WhatsApp" class="img-fluid" style="max-width: 256px;">
-                </div>
-                <div class="mt-3">
-                    <p class="text-muted mb-2">
-                        <i class="fas fa-mobile-alt me-2"></i>
-                        <strong>Escaneie com seu WhatsApp</strong>
-                    </p>
-                    <small class="text-muted">
-                        1. Abra o WhatsApp<br>
-                        2. Toque nos três pontos > "Aparelhos conectados"<br>
-                        3. Escaneie este código
-                    </small>
-                </div>
-            `;
+            const qrDisplay = document.getElementById('qr-display');
+            if (qrDisplay && !qrDisplay.innerHTML.includes('img')) {
+                qrDisplay.innerHTML = `
+                    <div class="p-3 bg-white rounded border shadow-sm">
+                        <img src="${data.qr_image}" alt="QR Code WhatsApp" class="img-fluid" style="max-width: 256px;">
+                    </div>
+                    <div class="mt-3">
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-mobile-alt me-2"></i>
+                            <strong>Escaneie com seu WhatsApp</strong>
+                        </p>
+                        <small class="text-muted">
+                            1. Abra o WhatsApp<br>
+                            2. Toque nos três pontos > "Aparelhos conectados"<br>
+                            3. Escaneie este código
+                        </small>
+                    </div>
+                `;
+            }
         } else if (data.message && data.message.includes('não disponível')) {
-            setTimeout(loadQRCode, 3000);
+            // Only retry if not already showing a QR code
+            const qrDisplay = document.getElementById('qr-display');
+            if (qrDisplay && !qrDisplay.innerHTML.includes('img')) {
+                setTimeout(loadQRCode, 3000);
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar QR:', error);
