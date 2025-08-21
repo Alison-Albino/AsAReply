@@ -1,0 +1,784 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AsA WhatsApp Bot{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="text-center">
+            <h1 class="display-5 mb-3">
+                <i class="fab fa-whatsapp text-success"></i>
+                AsA - Dashboard Principal
+            </h1>
+            <p class="lead text-muted">Sistema Completo de WhatsApp Bot com Inteligência Artificial</p>
+        </div>
+    </div>
+</div>
+
+<!-- Connection Status & QR Code Section -->
+<div class="row mb-4">
+    <!-- Connection Status -->
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-wifi me-2"></i>Status da Conexão
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="connection-status" class="text-center">
+                    <div id="connection-display">
+                        <!-- Status será carregado via JavaScript -->
+                        <div class="text-info">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Verificando conexão...</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button id="reconnect-btn" class="btn btn-outline-warning" style="display:none;">
+                            <i class="fas fa-sync me-2"></i>Reconectar
+                        </button>
+                        <button id="disconnect-btn" class="btn btn-outline-danger ms-2" style="display:none;">
+                            <i class="fas fa-sign-out-alt me-2"></i>Desconectar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code -->
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-qrcode me-2"></i>Código QR
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="qr-section" class="text-center">
+                    <div id="qr-display">
+                        <div class="text-muted">
+                            <i class="fas fa-qrcode fa-3x"></i>
+                            <p class="mt-3">Clique no botão abaixo para conectar</p>
+                        </div>
+                    </div>
+                    <button id="generate-qr-btn" class="btn btn-primary mt-3">
+                        <i class="fas fa-qrcode me-2"></i>Gerar QR Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Row -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="total-conversations">{{ stats.total_conversations if stats else '0' }}</h4>
+                        <p class="mb-0">Conversas</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-comments fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="total-messages">{{ stats.total_messages if stats else '0' }}</h4>
+                        <p class="mb-0">Mensagens</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-envelope fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0" id="active-responses">{{ stats.active_responses if stats else '0' }}</h4>
+                        <p class="mb-0">Respostas Ativas</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-robot fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-0">IA</h4>
+                        <p class="mb-0">Gemini Ativo</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-brain fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Tabs -->
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations" type="button" role="tab">
+                    <i class="fas fa-comments me-2"></i>Conversas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="responses-tab" data-bs-toggle="tab" data-bs-target="#responses" type="button" role="tab">
+                    <i class="fas fa-robot me-2"></i>Respostas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ai-config-tab" data-bs-toggle="tab" data-bs-target="#ai-config" type="button" role="tab">
+                    <i class="fas fa-brain me-2"></i>Configurar IA
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="test-tab" data-bs-toggle="tab" data-bs-target="#test" type="button" role="tab">
+                    <i class="fas fa-flask me-2"></i>Teste
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="mainTabsContent">
+            <!-- Conversations Tab -->
+            <div class="tab-pane fade show active" id="conversations" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Conversas Recentes</h5>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadConversations()">
+                        <i class="fas fa-sync me-2"></i>Atualizar
+                    </button>
+                </div>
+                
+                <div id="conversations-list">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mt-2">Carregando conversas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Responses Tab -->
+            <div class="tab-pane fade" id="responses" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Respostas Automáticas</h5>
+                    <button class="btn btn-success btn-sm" onclick="showAddResponseModal()">
+                        <i class="fas fa-plus me-2"></i>Nova Resposta
+                    </button>
+                </div>
+                
+                <div id="responses-list">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mt-2">Carregando respostas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Config Tab -->
+            <div class="tab-pane fade" id="ai-config" role="tabpanel">
+                <h5 class="mb-3">Configuração da Inteligência Artificial</h5>
+                
+                <form id="ai-config-form">
+                    <div class="mb-3">
+                        <label for="ai-prompt" class="form-label">Prompt da IA</label>
+                        <textarea class="form-control" id="ai-prompt" rows="8" placeholder="Digite o prompt personalizado para a IA...">
+Você é um assistente virtual inteligente para WhatsApp.
+Você deve responder de forma útil, amigável e profissional.
+
+Instruções:
+- Responda em português brasileiro
+- Seja conciso mas informativo
+- Mantenha um tom amigável e profissional
+- Se não souber algo, seja honesto sobre isso
+- Evite respostas muito longas para WhatsApp</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Salvar Configuração
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-info" onclick="testAI()">
+                                <i class="fas fa-flask me-2"></i>Testar IA
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="ai-test-section" class="mt-4" style="display:none;">
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">Teste da IA</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <input type="text" id="test-message-input" class="form-control" placeholder="Digite uma mensagem para testar...">
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="sendTestMessage()">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar Teste
+                            </button>
+                            <div id="ai-response" class="mt-3" style="display:none;">
+                                <strong>Resposta da IA:</strong>
+                                <div class="alert alert-info mt-2" id="ai-response-text"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Tab -->
+            <div class="tab-pane fade" id="test" role="tabpanel">
+                <h5 class="mb-3">Teste do Sistema</h5>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Simular Mensagem Recebida</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="test-phone" class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="test-phone" value="5511999999999" placeholder="5511999999999">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="test-name" class="form-label">Nome</label>
+                                <input type="text" class="form-control" id="test-name" value="Usuário Teste" placeholder="Nome do contato">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">&nbsp;</label>
+                                <button class="btn btn-primary w-100" onclick="sendTestMessage()">
+                                    <i class="fas fa-paper-plane me-2"></i>Enviar Teste
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="test-message" class="form-label">Mensagem</label>
+                            <input type="text" class="form-control" id="test-message" value="Olá, preciso de ajuda!" placeholder="Digite a mensagem de teste...">
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div id="test-results" class="alert alert-info" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Add Response Modal -->
+<div class="modal fade" id="addResponseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nova Resposta Automática</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="add-response-form">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="trigger-keyword" class="form-label">Palavra-chave</label>
+                        <input type="text" class="form-control" id="trigger-keyword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="response-text" class="form-label">Resposta</label>
+                        <textarea class="form-control" id="response-text" rows="3" required></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="is-active" checked>
+                        <label class="form-check-label" for="is-active">
+                            Resposta ativa
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let connectionStatusInterval;
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    updateConnectionStatus();
+    loadConversations();
+    loadResponses();
+    loadAIConfig();
+    
+    // Auto-refresh connection status every 10 seconds
+    connectionStatusInterval = setInterval(updateConnectionStatus, 10000);
+});
+
+// Connection Management
+async function updateConnectionStatus() {
+    try {
+        const response = await fetch('/connection_status');
+        const data = await response.json();
+        
+        const statusDisplay = document.getElementById('connection-display');
+        const reconnectBtn = document.getElementById('reconnect-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const qrSection = document.getElementById('qr-section');
+        
+        if (data.is_connected) {
+            statusDisplay.innerHTML = `
+                <div class="text-success">
+                    <i class="fas fa-check-circle fa-3x"></i>
+                    <h5 class="text-success mt-2">WhatsApp Conectado!</h5>
+                    <p class="text-muted">
+                        Última conexão: ${data.last_connected ? new Date(data.last_connected).toLocaleString('pt-BR') : 'Agora'}
+                    </p>
+                    <div class="alert alert-success">
+                        <i class="fas fa-robot me-2"></i>
+                        Sistema ativo e respondendo mensagens
+                    </div>
+                </div>
+            `;
+            reconnectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'inline-block';
+            
+            // Hide QR code when connected
+            document.getElementById('qr-display').innerHTML = `
+                <div class="text-success">
+                    <i class="fas fa-check-circle fa-3x"></i>
+                    <p class="mt-2">WhatsApp conectado com sucesso!</p>
+                </div>
+            `;
+            document.getElementById('generate-qr-btn').style.display = 'none';
+            
+        } else if (data.service_running === false) {
+            statusDisplay.innerHTML = `
+                <div class="text-warning">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    <h5 class="text-warning mt-2">Serviço Iniciando...</h5>
+                    <p class="text-muted">Aguarde enquanto o sistema é inicializado</p>
+                </div>
+            `;
+            reconnectBtn.style.display = 'inline-block';
+            disconnectBtn.style.display = 'none';
+            
+        } else {
+            statusDisplay.innerHTML = `
+                <div class="text-danger">
+                    <i class="fas fa-times-circle fa-3x"></i>
+                    <h5 class="text-danger mt-2">WhatsApp Desconectado</h5>
+                    <p class="text-muted">Conecte seu dispositivo escaneando o QR Code</p>
+                </div>
+            `;
+            reconnectBtn.style.display = 'inline-block';
+            disconnectBtn.style.display = 'none';
+            
+            // Show QR generation when disconnected
+            if (!document.getElementById('qr-display').innerHTML.includes('img')) {
+                document.getElementById('qr-display').innerHTML = `
+                    <div class="text-muted">
+                        <i class="fas fa-qrcode fa-3x"></i>
+                        <p class="mt-3">Clique no botão abaixo para conectar</p>
+                    </div>
+                `;
+            }
+            document.getElementById('generate-qr-btn').style.display = 'inline-block';
+        }
+        
+    } catch (error) {
+        console.error('Erro ao verificar status:', error);
+    }
+}
+
+// QR Code Generation
+document.getElementById('generate-qr-btn').addEventListener('click', async function() {
+    const btn = this;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando QR...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/generate_qr');
+        const data = await response.json();
+        
+        if (data.success) {
+            setTimeout(loadQRCode, 2000);
+        } else {
+            showAlert('Erro ao gerar QR Code: ' + (data.error || 'Erro desconhecido'), 'danger');
+        }
+    } catch (error) {
+        showAlert('Erro ao gerar QR Code', 'danger');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+async function loadQRCode() {
+    try {
+        const response = await fetch('/api/get-qr');
+        const data = await response.json();
+        
+        if (data.success && data.qr_image) {
+            document.getElementById('qr-display').innerHTML = `
+                <div class="p-3 bg-white rounded border shadow-sm">
+                    <img src="${data.qr_image}" alt="QR Code WhatsApp" class="img-fluid" style="max-width: 256px;">
+                </div>
+                <div class="mt-3">
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        <strong>Escaneie com seu WhatsApp</strong>
+                    </p>
+                    <small class="text-muted">
+                        1. Abra o WhatsApp<br>
+                        2. Toque nos três pontos > "Aparelhos conectados"<br>
+                        3. Escaneie este código
+                    </small>
+                </div>
+            `;
+        } else if (data.message && data.message.includes('não disponível')) {
+            setTimeout(loadQRCode, 3000);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar QR:', error);
+    }
+}
+
+// Load conversations
+async function loadConversations() {
+    try {
+        const response = await fetch('/api/conversations');
+        const data = await response.json();
+        
+        const container = document.getElementById('conversations-list');
+        
+        if (data.conversations && data.conversations.length > 0) {
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Contato</th>
+                                <th>Telefone</th>
+                                <th>Última Atividade</th>
+                                <th>Mensagens</th>
+                                <th>Status IA</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.conversations.forEach(conv => {
+                html += `
+                    <tr>
+                        <td>
+                            <i class="fas fa-user me-2"></i>
+                            ${conv.contact_name || 'Sem nome'}
+                        </td>
+                        <td>${conv.phone_number}</td>
+                        <td>
+                            <small class="text-muted">
+                                ${new Date(conv.updated_at).toLocaleString('pt-BR')}
+                            </small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">${conv.message_count}</span>
+                        </td>
+                        <td>
+                            ${conv.ai_paused ? 
+                                '<span class="badge bg-warning">Pausada</span>' : 
+                                '<span class="badge bg-success">Ativa</span>'
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="toggleAI(${conv.id})">
+                                <i class="fas fa-${conv.ai_paused ? 'play' : 'pause'}"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info" onclick="viewConversation(${conv.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Nenhuma conversa ainda</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar conversas:', error);
+    }
+}
+
+// Load responses
+async function loadResponses() {
+    try {
+        const response = await fetch('/api/responses');
+        const data = await response.json();
+        
+        const container = document.getElementById('responses-list');
+        
+        if (data.responses && data.responses.length > 0) {
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Palavra-chave</th>
+                                <th>Resposta</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.responses.forEach(resp => {
+                html += `
+                    <tr>
+                        <td><strong>${resp.trigger_keyword}</strong></td>
+                        <td>${resp.response_text.substring(0, 50)}${resp.response_text.length > 50 ? '...' : ''}</td>
+                        <td>
+                            ${resp.is_active ? 
+                                '<span class="badge bg-success">Ativa</span>' : 
+                                '<span class="badge bg-secondary">Inativa</span>'
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteResponse(${resp.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Nenhuma resposta configurada</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar respostas:', error);
+    }
+}
+
+// Load AI config
+async function loadAIConfig() {
+    try {
+        const response = await fetch('/api/ai-config');
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('ai-prompt').value = data.prompt || '';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar config IA:', error);
+    }
+}
+
+// Send test message
+async function sendTestMessage() {
+    const phone = document.getElementById('test-phone').value;
+    const name = document.getElementById('test-name').value;
+    const message = document.getElementById('test-message').value;
+    
+    if (!message.trim()) {
+        showAlert('Digite uma mensagem para testar', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/simulate_message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                phone: phone,
+                message: message,
+                name: name
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showAlert('Mensagem de teste enviada com sucesso!', 'success');
+            document.getElementById('test-results').innerHTML = 'Mensagem enviada para o sistema. Verifique na aba Conversas.';
+            document.getElementById('test-results').style.display = 'block';
+            
+            // Reload conversations after test
+            setTimeout(loadConversations, 2000);
+        }
+    } catch (error) {
+        showAlert('Erro ao enviar mensagem de teste', 'danger');
+    }
+}
+
+// Utility functions
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+function showAddResponseModal() {
+    new bootstrap.Modal(document.getElementById('addResponseModal')).show();
+}
+
+// Add response form handler
+document.getElementById('add-response-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        trigger_keyword: document.getElementById('trigger-keyword').value,
+        response_text: document.getElementById('response-text').value,
+        is_active: document.getElementById('is-active').checked
+    };
+    
+    try {
+        const response = await fetch('/api/responses', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('Resposta adicionada com sucesso!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addResponseModal')).hide();
+            loadResponses();
+            this.reset();
+        } else {
+            showAlert('Erro ao adicionar resposta: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        showAlert('Erro ao salvar resposta', 'danger');
+    }
+});
+
+// AI config form handler
+document.getElementById('ai-config-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const prompt = document.getElementById('ai-prompt').value;
+    
+    try {
+        const response = await fetch('/api/ai-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ai_prompt: prompt })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('Configuração da IA salva com sucesso!', 'success');
+        } else {
+            showAlert('Erro ao salvar configuração', 'danger');
+        }
+    } catch (error) {
+        showAlert('Erro ao salvar configuração', 'danger');
+    }
+});
+
+function testAI() {
+    document.getElementById('ai-test-section').style.display = 'block';
+}
+
+async function sendTestAI() {
+    const message = document.getElementById('test-message-input').value;
+    const prompt = document.getElementById('ai-prompt').value;
+    
+    if (!message.trim()) {
+        showAlert('Digite uma mensagem para testar', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/test-ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message, prompt })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('ai-response-text').textContent = data.response;
+            document.getElementById('ai-response').style.display = 'block';
+        } else {
+            showAlert('Erro ao testar IA: ' + data.error, 'danger');
+        }
+    } catch (error) {
+        showAlert('Erro ao testar IA', 'danger');
+    }
+}
+</script>
+{% endblock %}

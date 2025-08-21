@@ -25,31 +25,36 @@ class WhatsAppService:
         try:
             logging.info("📱 Gerando QR Code...")
             
-            # Aguardar um pouco para o serviço estar pronto
-            time.sleep(2)
-            
-            # Obter QR Code do serviço Baileys
-            qr_result = baileys_service.get_qr_code()
-            
-            if qr_result.get('success'):
-                qr_code = qr_result.get('qr_code', '')
-                qr_base64 = qr_result.get('qr_image', '')
+            # Tentar gerar QR code múltiplas vezes
+            for attempt in range(3):
+                qr_result = baileys_service.get_qr_code()
                 
-                with app.app_context():
-                    connection = WhatsAppConnection.query.first()
-                    if not connection:
-                        connection = WhatsAppConnection()
-                        db.session.add(connection)
+                if qr_result.get('success') and qr_result.get('qr_image'):
+                    qr_base64 = qr_result.get('qr_image', '')
                     
-                    connection.qr_code = qr_base64 or qr_code
-                    connection.is_connected = False
-                    db.session.commit()
+                    with app.app_context():
+                        connection = WhatsAppConnection.query.first()
+                        if not connection:
+                            connection = WhatsAppConnection()
+                            db.session.add(connection)
+                        
+                        connection.qr_code = qr_base64
+                        connection.is_connected = False
+                        db.session.commit()
+                    
+                    logging.info("✅ QR Code gerado com sucesso!")
+                    return qr_base64
+                    
+                elif qr_result.get('success') == False and 'não disponível' not in qr_result.get('message', ''):
+                    logging.warning(f"Erro ao gerar QR: {qr_result.get('error', 'Erro desconhecido')}")
+                    return None
                 
-                logging.info("✅ QR Code gerado com sucesso!")
-                return qr_base64 or qr_code
-            else:
-                logging.warning(f"QR Code ainda não está pronto: {qr_result.get('message', 'Aguardando...')}")
-                return None
+                # Aguardar antes de tentar novamente
+                logging.info(f"QR Code não disponível (tentativa {attempt + 1}/3), aguardando...")
+                time.sleep(3)
+            
+            logging.warning("QR Code não pôde ser gerado após 3 tentativas")
+            return None
                 
         except Exception as e:
             logging.error(f"Erro ao gerar QR Code: {e}")

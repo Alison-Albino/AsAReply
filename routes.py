@@ -14,9 +14,19 @@ ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "a
 
 @app.route('/')
 def index():
-    """Main page showing WhatsApp connection status"""
-    connection_status = whatsapp_service.get_connection_status()
-    return render_template('index_simple.html', connection_status=connection_status)
+    """Main dashboard - unified interface"""
+    # Get statistics
+    total_conversations = Conversation.query.count()
+    total_messages = Message.query.count()
+    active_responses = AutoResponse.query.filter_by(is_active=True).count()
+    
+    stats = {
+        'total_conversations': total_conversations,
+        'total_messages': total_messages,
+        'active_responses': active_responses
+    }
+    
+    return render_template('dashboard.html', stats=stats)
 
 @app.route('/generate_qr')
 def generate_qr():
@@ -241,24 +251,8 @@ def admin_required(f):
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    """Admin dashboard"""
-    # Get statistics
-    total_conversations = Conversation.query.count()
-    total_messages = Message.query.count()
-    active_responses = AutoResponse.query.filter_by(is_active=True).count()
-    
-    recent_conversations = Conversation.query.order_by(
-        Conversation.updated_at.desc()
-    ).limit(5).all()
-    
-    stats = {
-        'total_conversations': total_conversations,
-        'total_messages': total_messages,
-        'active_responses': active_responses,
-        'recent_conversations': recent_conversations
-    }
-    
-    return render_template('admin_dashboard.html', stats=stats)
+    """Redirect to main dashboard"""
+    return redirect(url_for('index'))
 
 @app.route('/admin/conversations')
 @admin_required
@@ -499,6 +493,120 @@ def simulate_message():
     whatsapp_service.process_incoming_message(phone, message, name)
     
     return jsonify({'status': 'success'})
+
+# New API endpoints for dashboard
+@app.route('/api/conversations')
+def api_conversations():
+    """API endpoint for conversations data"""
+    conversations = Conversation.query.order_by(
+        Conversation.updated_at.desc()
+    ).limit(20).all()
+    
+    result = []
+    for conv in conversations:
+        result.append({
+            'id': conv.id,
+            'phone_number': conv.phone_number,
+            'contact_name': conv.contact_name,
+            'updated_at': conv.updated_at.isoformat(),
+            'ai_paused': conv.ai_paused or False,
+            'message_count': len(conv.messages)
+        })
+    
+    return jsonify({'conversations': result})
+
+@app.route('/api/responses')
+def api_responses():
+    """API endpoint for responses data"""
+    responses = AutoResponse.query.order_by(AutoResponse.created_at.desc()).all()
+    
+    result = []
+    for resp in responses:
+        result.append({
+            'id': resp.id,
+            'trigger_keyword': resp.trigger_keyword,
+            'response_text': resp.response_text,
+            'is_active': resp.is_active
+        })
+    
+    return jsonify({'responses': result})
+
+@app.route('/api/responses', methods=['POST'])
+def api_add_response():
+    """API endpoint to add new response"""
+    data = request.get_json()
+    
+    try:
+        response = AutoResponse()
+        response.trigger_keyword = data.get('trigger_keyword')
+        response.response_text = data.get('response_text')
+        response.is_active = data.get('is_active', True)
+        
+        db.session.add(response)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/ai-config', methods=['GET', 'POST'])
+def api_ai_config():
+    """API endpoint for AI configuration"""
+    if request.method == 'POST':
+        data = request.get_json()
+        ai_prompt = data.get('ai_prompt')
+        
+        try:
+            setting = SystemSettings.query.filter_by(setting_key='ai_prompt').first()
+            if not setting:
+                setting = SystemSettings(setting_key='ai_prompt')
+                db.session.add(setting)
+            
+            setting.setting_value = ai_prompt
+            db.session.commit()
+            
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'error': str(e)})
+    
+    else:
+        setting = SystemSettings.query.filter_by(setting_key='ai_prompt').first()
+        current_prompt = setting.setting_value if setting else None
+        
+        default_prompt = """Você é um assistente virtual inteligente para WhatsApp.
+Você deve responder de forma útil, amigável e profissional.
+
+Instruções:
+- Responda em português brasileiro
+- Seja conciso mas informativo
+- Mantenha um tom amigável e profissional
+- Se não souber algo, seja honesto sobre isso
+- Evite respostas muito longas para WhatsApp"""
+        
+        return jsonify({
+            'success': True,
+            'prompt': current_prompt or default_prompt
+        })
+
+@app.route('/api/test-ai', methods=['POST'])
+def api_test_ai():
+    """API endpoint to test AI prompt"""
+    try:
+        from ai_service import test_prompt_response
+        
+        data = request.get_json()
+        message = data.get('message')
+        prompt = data.get('prompt')
+        
+        if not message or not prompt:
+            return jsonify({'success': False, 'error': 'Mensagem e prompt são obrigatórios'})
+        
+        response = test_prompt_response(message, prompt)
+        return jsonify({'success': True, 'response': response})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.context_processor
 def inject_admin_status():
