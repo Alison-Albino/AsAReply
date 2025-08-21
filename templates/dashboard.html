@@ -196,10 +196,16 @@
             <!-- Responses Tab -->
             <div class="tab-pane fade" id="responses" role="tabpanel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0">Respostas Automáticas</h5>
+                    <h5 class="mb-0">Respostas Automáticas (Fallback)</h5>
                     <button class="btn btn-success btn-sm" onclick="showAddResponseModal()">
                         <i class="fas fa-plus me-2"></i>Nova Resposta
                     </button>
+                </div>
+
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Sistema Híbrido:</strong> Quando a IA estiver funcionando, ela responde automaticamente. 
+                    Quando não estiver configurada ou falhando, o sistema usa essas respostas automáticas.
                 </div>
                 
                 <div id="responses-list">
@@ -395,7 +401,7 @@ Instruções:
 <!-- Modals -->
 <!-- Add Response Modal -->
 <div class="modal fade" id="addResponseModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Nova Resposta Automática</h5>
@@ -404,17 +410,78 @@ Instruções:
             <form id="add-response-form">
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="trigger-keyword" class="form-label">Palavra-chave</label>
-                        <input type="text" class="form-control" id="trigger-keyword" required>
+                        <label for="trigger-keyword" class="form-label">Palavra-chave / Pergunta</label>
+                        <input type="text" class="form-control" id="trigger-keyword" placeholder="Ex: horário, preço, produto" required>
+                        <div class="form-text">Palavra-chave que irá ativar esta resposta</div>
                     </div>
+                    
                     <div class="mb-3">
-                        <label for="response-text" class="form-label">Resposta</label>
-                        <textarea class="form-control" id="response-text" rows="3" required></textarea>
+                        <label class="form-label">Tipo de Resposta</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="response-type" id="simple-response" value="simple" checked>
+                            <label class="form-check-label" for="simple-response">
+                                Resposta Simples
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="response-type" id="multiple-choice" value="multiple">
+                            <label class="form-check-label" for="multiple-choice">
+                                Resposta com Opções (a, b, c, d)
+                            </label>
+                        </div>
                     </div>
+                    
+                    <!-- Simple Response -->
+                    <div id="simple-response-section" class="mb-3">
+                        <label for="response-text" class="form-label">Resposta</label>
+                        <textarea class="form-control" id="response-text" rows="3" placeholder="Digite a resposta..."></textarea>
+                    </div>
+                    
+                    <!-- Multiple Choice Section -->
+                    <div id="multiple-choice-section" class="mb-3" style="display:none;">
+                        <label class="form-label">Pergunta Principal</label>
+                        <textarea class="form-control mb-3" id="question-text" rows="2" placeholder="Ex: Escolha uma opção:"></textarea>
+                        
+                        <label class="form-label">Opções de Resposta</label>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">a)</span>
+                                    <input type="text" class="form-control" id="option-a" placeholder="Opção A">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">b)</span>
+                                    <input type="text" class="form-control" id="option-b" placeholder="Opção B">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">c)</span>
+                                    <input type="text" class="form-control" id="option-c" placeholder="Opção C">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="input-group">
+                                    <span class="input-group-text">d)</span>
+                                    <input type="text" class="form-control" id="option-d" placeholder="Opção D">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="is-active" checked>
                         <label class="form-check-label" for="is-active">
                             Resposta ativa
+                        </label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="pause-ai">
+                        <label class="form-check-label" for="pause-ai">
+                            Pausar IA após esta resposta (aguardar intervenção humana)
                         </label>
                     </div>
                 </div>
@@ -678,6 +745,7 @@ async function loadResponses() {
                             <tr>
                                 <th>Palavra-chave</th>
                                 <th>Resposta</th>
+                                <th>Tipo</th>
                                 <th>Status</th>
                                 <th>Ações</th>
                             </tr>
@@ -686,15 +754,24 @@ async function loadResponses() {
             `;
             
             data.responses.forEach(resp => {
+                const typeBadge = resp.response_type === 'multiple' ? 
+                    '<span class="badge bg-info">Múltipla Escolha</span>' : 
+                    '<span class="badge bg-primary">Simples</span>';
+                
+                const pauseBadge = resp.pause_ai ? 
+                    '<br><span class="badge bg-warning mt-1">Pausa IA</span>' : '';
+                    
                 html += `
                     <tr>
                         <td><strong>${resp.trigger_keyword}</strong></td>
                         <td>${resp.response_text.substring(0, 50)}${resp.response_text.length > 50 ? '...' : ''}</td>
+                        <td>${typeBadge}</td>
                         <td>
                             ${resp.is_active ? 
                                 '<span class="badge bg-success">Ativa</span>' : 
                                 '<span class="badge bg-secondary">Inativa</span>'
                             }
+                            ${pauseBadge}
                         </td>
                         <td>
                             <button class="btn btn-sm btn-outline-danger" onclick="deleteResponse(${resp.id})">
@@ -799,15 +876,65 @@ function showAddResponseModal() {
     new bootstrap.Modal(document.getElementById('addResponseModal')).show();
 }
 
+// Response type toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const simpleRadio = document.getElementById('simple-response');
+    const multipleRadio = document.getElementById('multiple-choice');
+    const simpleSection = document.getElementById('simple-response-section');
+    const multipleSection = document.getElementById('multiple-choice-section');
+    
+    if (simpleRadio && multipleRadio) {
+        simpleRadio.addEventListener('change', function() {
+            if (this.checked) {
+                simpleSection.style.display = 'block';
+                multipleSection.style.display = 'none';
+            }
+        });
+        
+        multipleRadio.addEventListener('change', function() {
+            if (this.checked) {
+                simpleSection.style.display = 'none';
+                multipleSection.style.display = 'block';
+            }
+        });
+    }
+});
+
 // Add response form handler
 document.getElementById('add-response-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = {
+    const responseType = document.querySelector('input[name="response-type"]:checked').value;
+    
+    let formData = {
         trigger_keyword: document.getElementById('trigger-keyword').value,
-        response_text: document.getElementById('response-text').value,
-        is_active: document.getElementById('is-active').checked
+        is_active: document.getElementById('is-active').checked,
+        pause_ai: document.getElementById('pause-ai').checked,
+        response_type: responseType
     };
+    
+    if (responseType === 'simple') {
+        formData.response_text = document.getElementById('response-text').value;
+    } else {
+        // Multiple choice format
+        const question = document.getElementById('question-text').value;
+        const options = {
+            a: document.getElementById('option-a').value,
+            b: document.getElementById('option-b').value,
+            c: document.getElementById('option-c').value,
+            d: document.getElementById('option-d').value
+        };
+        
+        // Build formatted response
+        let response = question + '\n\n';
+        if (options.a) response += `a) ${options.a}\n`;
+        if (options.b) response += `b) ${options.b}\n`;
+        if (options.c) response += `c) ${options.c}\n`;
+        if (options.d) response += `d) ${options.d}`;
+        
+        formData.response_text = response;
+        formData.options = options;
+    }
     
     try {
         const response = await fetch('/api/responses', {

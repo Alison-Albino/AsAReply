@@ -526,6 +526,8 @@ def api_responses():
             'id': resp.id,
             'trigger_keyword': resp.trigger_keyword,
             'response_text': resp.response_text,
+            'response_type': getattr(resp, 'response_type', 'simple'),
+            'pause_ai': getattr(resp, 'pause_ai', False),
             'is_active': resp.is_active
         })
     
@@ -540,11 +542,14 @@ def api_add_response():
         response = AutoResponse()
         response.trigger_keyword = data.get('trigger_keyword')
         response.response_text = data.get('response_text')
+        response.response_type = data.get('response_type', 'simple')
+        response.pause_ai = data.get('pause_ai', False)
         response.is_active = data.get('is_active', True)
         
         db.session.add(response)
         db.session.commit()
         
+        logging.info(f"Nova resposta automática adicionada: {response.trigger_keyword} (Tipo: {response.response_type}, Pausar IA: {response.pause_ai})")
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()

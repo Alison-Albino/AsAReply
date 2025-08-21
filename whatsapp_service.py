@@ -231,13 +231,8 @@ class WhatsAppService:
             return "Olá! Estou passando por alguns ajustes técnicos. Que tal tentar novamente em alguns minutos?"
     
     def generate_response_for_queue(self, messages_list: list, conversation: Conversation) -> str:
-        """Generate AI response for multiple queued messages"""
+        """Generate hybrid AI/fallback response for multiple queued messages"""
         try:
-            # Get recent conversation history for context
-            recent_messages = Message.query.filter_by(
-                conversation_id=conversation.id
-            ).order_by(Message.timestamp.desc()).limit(10).all()
-            
             # Combine all queued messages into a single context
             if len(messages_list) == 1:
                 combined_message = messages_list[0]
@@ -247,14 +242,82 @@ class WhatsAppService:
                     combined_message += f"Mensagem {i}: {msg}\n"
                 combined_message += f"\nPor favor, responda considerando todas essas {len(messages_list)} mensagens de forma integrada."
             
-            logging.info(f"🤖 Gerando resposta IA para {len(messages_list)} mensagens combinadas")
+            # First try: Use AI if available
+            response_text = self._try_ai_response(combined_message, conversation)
+            if response_text:
+                logging.info(f"🤖 Resposta gerada por IA para {conversation.phone_number}")
+                return response_text
             
-            # Generate AI response using custom prompt
-            return generate_ai_response(combined_message, recent_messages[::-1])
+            # Second try: Use automatic responses as fallback
+            response_text = self._try_automatic_response(combined_message, conversation)
+            if response_text:
+                logging.info(f"🔄 Resposta automática usada para {conversation.phone_number}")
+                return response_text
+            
+            # Final fallback: Generic response
+            logging.info(f"⚠️ Usando resposta genérica para {conversation.phone_number}")
+            return "Olá! Obrigado por entrar em contato. No momento estou com limitações, mas em breve retornarei com uma resposta."
             
         except Exception as e:
             logging.error(f"Erro ao gerar resposta para fila: {e}")
             return "Olá! Vi que você enviou algumas mensagens. Estou com problemas técnicos no momento, mas vou retornar assim que possível!"
+    
+    def _try_ai_response(self, message: str, conversation: Conversation) -> str:
+        """Try to generate AI response if available"""
+        try:
+            # Check if AI is available
+            import os
+            if not os.environ.get('GEMINI_API_KEY'):
+                logging.debug("IA não disponível: chave API não configurada")
+                return None
+            
+            # Get recent conversation history for context
+            recent_messages = Message.query.filter_by(
+                conversation_id=conversation.id
+            ).order_by(Message.timestamp.desc()).limit(10).all()
+            
+            # Generate AI response using custom prompt
+            response = generate_ai_response(message, recent_messages[::-1])
+            
+            if response and "não está disponível" not in response.lower():
+                return response
+            else:
+                logging.debug("IA retornou resposta de erro ou vazia")
+                return None
+                
+        except Exception as e:
+            logging.debug(f"Erro ao tentar IA: {e}")
+            return None
+    
+    def _try_automatic_response(self, message: str, conversation: Conversation) -> str:
+        """Try to find matching automatic response"""
+        try:
+            # Get active automatic responses
+            responses = AutoResponse.query.filter_by(is_active=True).all()
+            
+            message_lower = message.lower()
+            for response in responses:
+                trigger = response.trigger_keyword.lower()
+                
+                # Check if trigger word is in the message
+                if trigger in message_lower:
+                    logging.info(f"🎯 Palavra-chave encontrada: '{trigger}' para {conversation.phone_number}")
+                    
+                    # Check if this response should pause AI
+                    if response.pause_ai:
+                        conversation.ai_paused = True
+                        conversation.paused_at = datetime.utcnow()
+                        db.session.commit()
+                        logging.info(f"🚫 IA pausada para {conversation.phone_number} após resposta automática")
+                    
+                    return response.response_text
+            
+            logging.debug("Nenhuma palavra-chave encontrada nas respostas automáticas")
+            return None
+            
+        except Exception as e:
+            logging.debug(f"Erro ao buscar resposta automática: {e}")
+            return None
     
     def send_response(self, conversation: Conversation, response_text: str):
         """Send response message usando Baileys"""

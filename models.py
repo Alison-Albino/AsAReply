@@ -30,6 +30,8 @@ class AutoResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     trigger_keyword = db.Column(db.String(100), nullable=False, unique=True)
     response_text = db.Column(db.Text, nullable=False)
+    response_type = db.Column(db.String(20), default='simple')  # 'simple' or 'multiple'
+    pause_ai = db.Column(db.Boolean, default=False)  # Pause AI after this response
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
