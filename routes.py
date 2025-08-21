@@ -649,6 +649,10 @@ def api_save_gemini_key():
         with open('.env', 'w') as f:
             f.write('\n'.join(lines))
         
+        # Reinitialize AI client with new API key
+        from ai_service import initialize_ai_client
+        initialize_ai_client()
+        
         logging.info('✓ Chave API do Gemini configurada com sucesso')
         return jsonify({'success': True})
         

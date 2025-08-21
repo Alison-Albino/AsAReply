@@ -1,23 +1,45 @@
 import os
 import logging
-try:
-    from google import genai
-    from google.genai import types
-    # Configure Gemini AI client only if API key is available
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        client = genai.Client(api_key=api_key)
-        types_available = True
-    else:
+
+# Global variables for AI client
+client = None
+genai = None
+types = None
+types_available = False
+
+def initialize_ai_client():
+    """Initialize or reinitialize the AI client with current API key"""
+    global client, genai, types, types_available
+    
+    try:
+        from google import genai as google_genai
+        from google.genai import types as genai_types
+        
+        genai = google_genai
+        types = genai_types
+        
+        # Get API key from environment
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            client = genai.Client(api_key=api_key)
+            types_available = True
+            logging.info("✅ Cliente Gemini AI inicializado com sucesso")
+            return True
+        else:
+            client = None
+            types_available = False
+            logging.warning("GEMINI_API_KEY not provided - AI features will be disabled")
+            return False
+    except ImportError:
+        genai = None
         client = None
+        types = None
         types_available = False
-        logging.warning("GEMINI_API_KEY not provided - AI features will be disabled")
-except ImportError:
-    genai = None
-    client = None
-    types = None
-    types_available = False
-    logging.warning("Google Genai library not available")
+        logging.warning("Google Genai library not available")
+        return False
+
+# Initialize on module load
+initialize_ai_client()
 
 def get_custom_prompt():
     """Get custom AI prompt from database"""
@@ -55,6 +77,10 @@ def generate_ai_response(user_message: str, conversation_history=None) -> str:
         AI generated response
     """
     try:
+        # Try to reinitialize if client is not available
+        if not client:
+            initialize_ai_client()
+        
         if not client:
             return "Desculpe, o serviço de IA não está disponível no momento."
             
@@ -96,6 +122,10 @@ def generate_ai_response(user_message: str, conversation_history=None) -> str:
 def test_prompt_response(user_message: str, custom_prompt: str) -> str:
     """Test a prompt with a message without saving to database"""
     try:
+        # Try to reinitialize if client is not available
+        if not client:
+            initialize_ai_client()
+            
         if not client:
             return "Serviço de IA não disponível"
             
@@ -202,20 +232,12 @@ def analyze_message_intent(message: str) -> dict:
 def test_gemini_connection():
     """Test Gemini API connection with a simple message"""
     try:
-        import os
-        
-        # Check if API key exists
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
+        # Reinitialize client to use current API key
+        if not initialize_ai_client():
             return {"success": False, "error": "Chave API não configurada"}
         
-        # Reinitialize client with new API key
-        global client
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-        except Exception as e:
-            return {"success": False, "error": f"Erro ao inicializar cliente: {str(e)}"}
+        if not client:
+            return {"success": False, "error": "Cliente AI não foi inicializado"}
         
         # Test with a simple message
         test_message = "Olá, teste de conexão"
