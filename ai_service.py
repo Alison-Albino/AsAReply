@@ -119,6 +119,39 @@ def test_prompt_response(user_message: str, custom_prompt: str) -> str:
         logging.error(f"Erro ao testar prompt: {e}")
         return f"Erro: {str(e)}"
 
+def test_gemini_connection():
+    """Test Gemini API connection"""
+    try:
+        # Re-initialize client with current API key
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return {"success": False, "error": "Nenhuma chave API configurada"}
+        
+        # Create new client instance
+        test_client = genai.Client(api_key=api_key)
+        
+        # Test with a simple message
+        test_prompt = "Responda apenas 'OK' para confirmar que você está funcionando."
+        
+        response = test_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=test_prompt
+        )
+        
+        if response.text:
+            return {"success": True, "response": response.text.strip()}
+        else:
+            return {"success": False, "error": "API não retornou resposta"}
+            
+    except Exception as e:
+        error_msg = str(e)
+        if "API_KEY_INVALID" in error_msg or "invalid" in error_msg.lower():
+            return {"success": False, "error": "Chave API inválida"}
+        elif "quota" in error_msg.lower():
+            return {"success": False, "error": "Cota da API excedida"}
+        else:
+            return {"success": False, "error": f"Erro de conexão: {error_msg}"}
+
 def analyze_message_intent(message: str) -> dict:
     """
     Analyze message intent to determine best response strategy

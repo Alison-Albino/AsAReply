@@ -608,6 +608,103 @@ def api_test_ai():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/gemini-key-status')
+def api_gemini_key_status():
+    """Check if Gemini API key is configured"""
+    try:
+        import os
+        has_key = bool(os.environ.get('GEMINI_API_KEY'))
+        return jsonify({'has_key': has_key})
+    except Exception as e:
+        return jsonify({'has_key': False, 'error': str(e)})
+
+@app.route('/api/gemini-key', methods=['POST'])
+def api_save_gemini_key():
+    """Save Gemini API key as environment variable"""
+    try:
+        data = request.get_json()
+        api_key = data.get('api_key', '').strip()
+        
+        if not api_key:
+            return jsonify({'success': False, 'error': 'Chave API não pode estar vazia'})
+        
+        if not api_key.startswith('AIza'):
+            return jsonify({'success': False, 'error': 'Chave API inválida. Deve começar com "AIza"'})
+        
+        # Save to environment (this will persist in Replit)
+        import os
+        os.environ['GEMINI_API_KEY'] = api_key
+        
+        # Also save to a local file as backup
+        try:
+            with open('.env', 'r') as f:
+                content = f.read()
+        except:
+            content = ''
+        
+        # Remove existing GEMINI_API_KEY line if present
+        lines = [line for line in content.split('\n') if not line.startswith('GEMINI_API_KEY=')]
+        lines.append(f'GEMINI_API_KEY={api_key}')
+        
+        with open('.env', 'w') as f:
+            f.write('\n'.join(lines))
+        
+        logging.info('✓ Chave API do Gemini configurada com sucesso')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logging.error(f'Erro ao salvar chave API: {e}')
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/gemini-key', methods=['DELETE'])
+def api_remove_gemini_key():
+    """Remove Gemini API key"""
+    try:
+        import os
+        
+        # Remove from environment
+        if 'GEMINI_API_KEY' in os.environ:
+            del os.environ['GEMINI_API_KEY']
+        
+        # Remove from .env file
+        try:
+            with open('.env', 'r') as f:
+                content = f.read()
+            
+            lines = [line for line in content.split('\n') if not line.startswith('GEMINI_API_KEY=')]
+            
+            with open('.env', 'w') as f:
+                f.write('\n'.join(lines))
+        except:
+            pass  # File doesn't exist or can't be read
+        
+        logging.info('✓ Chave API do Gemini removida')
+        return jsonify({'success': True})
+        
+    except Exception as e:
+        logging.error(f'Erro ao remover chave API: {e}')
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/test-gemini')
+def api_test_gemini():
+    """Test Gemini API connection"""
+    try:
+        import os
+        
+        api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            return jsonify({'success': False, 'error': 'Nenhuma chave API configurada'})
+        
+        # Test the API with a simple message
+        from ai_service import test_gemini_connection
+        result = test_gemini_connection()
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logging.error(f'Erro ao testar Gemini: {e}')
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.context_processor
 def inject_admin_status():
     """Inject admin login status into templates"""
