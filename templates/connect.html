@@ -121,7 +121,10 @@ let connectionCheckInterval;
 checkConnectionStatus();
 
 // Generate QR Code
-document.getElementById('generate-qr-btn')?.addEventListener('click', function() {
+document.addEventListener('DOMContentLoaded', function() {
+    const generateBtn = document.getElementById('generate-qr-btn');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
     const btn = this;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando QR...';
     btn.disabled = true;
@@ -148,6 +151,8 @@ document.getElementById('generate-qr-btn')?.addEventListener('click', function()
             btn.innerHTML = '<i class="fas fa-qrcode me-2"></i>Gerar Código QR';
             btn.disabled = false;
         });
+        });
+    }
 });
 
 function showQRCode(qrImage) {
