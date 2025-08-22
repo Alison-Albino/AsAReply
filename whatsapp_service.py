@@ -292,8 +292,25 @@ class WhatsAppService:
     def _try_automatic_response(self, message: str, conversation: Conversation) -> str:
         """Try to find matching automatic response"""
         try:
-            # Get active automatic responses
-            responses = AutoResponse.query.filter_by(is_active=True).all()
+            # Verificar se é a primeira mensagem da conversa
+            message_count = Message.query.filter_by(conversation_id=conversation.id).count()
+            is_first_message = message_count <= 1  # <= 1 porque a mensagem atual ainda não foi salva
+            
+            # Buscar respostas ativas baseadas no tipo de trigger
+            if is_first_message:
+                # Primeira mensagem: buscar triggers de "first_message"
+                responses = AutoResponse.query.filter_by(
+                    is_active=True, 
+                    trigger_type='first_message'
+                ).all()
+                logging.info(f"🎯 Verificando triggers de primeira mensagem para {conversation.phone_number}")
+            else:
+                # Mensagens subsequentes: buscar triggers de "follow_up"
+                responses = AutoResponse.query.filter_by(
+                    is_active=True, 
+                    trigger_type='follow_up'
+                ).all()
+                logging.info(f"🔄 Verificando triggers de continuidade para {conversation.phone_number}")
             
             message_lower = message.lower()
             for response in responses:
@@ -310,9 +327,28 @@ class WhatsAppService:
                         db.session.commit()
                         logging.info(f"🚫 IA pausada para {conversation.phone_number} após resposta automática")
                     
-                    return response.response_text
+                    # Montar resposta baseada no tipo
+                    if response.response_type == 'multiple' and response.main_question:
+                        # Resposta com múltipla escolha
+                        response_text = response.main_question + "\n\n"
+                        if response.option_a:
+                            response_text += f"a) {response.option_a}\n"
+                        if response.option_b:
+                            response_text += f"b) {response.option_b}\n"
+                        if response.option_c:
+                            response_text += f"c) {response.option_c}\n"
+                        if response.option_d:
+                            response_text += f"d) {response.option_d}\n"
+                        
+                        if response.pause_ai:
+                            response_text += "\n_Aguardando sua escolha..._"
+                        
+                        return response_text
+                    else:
+                        # Resposta simples
+                        return response.response_text
             
-            logging.debug("Nenhuma palavra-chave encontrada nas respostas automáticas")
+            logging.debug(f"Nenhuma palavra-chave encontrada nas respostas automáticas ({'primeira mensagem' if is_first_message else 'continuidade'})")
             return None
             
         except Exception as e:

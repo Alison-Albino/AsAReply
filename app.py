@@ -36,7 +36,7 @@ with app.app_context():
     # Add new columns if they don't exist (migration)
     try:
         from sqlalchemy import text
-        # Check if ai_paused column exists
+        # Check if ai_paused column exists in conversation table
         with db.engine.connect() as conn:
             result = conn.execute(text("PRAGMA table_info(conversation)"))
             columns = [row[1] for row in result]
@@ -50,6 +50,41 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE conversation ADD COLUMN paused_at DATETIME"))
                 conn.commit()
                 logging.info("✅ Added paused_at column")
+        
+        # Check if new columns exist in auto_response table
+        with db.engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info(auto_response)"))
+            columns = [row[1] for row in result]
+            
+            if 'trigger_type' not in columns:
+                conn.execute(text("ALTER TABLE auto_response ADD COLUMN trigger_type VARCHAR(20) DEFAULT 'first_message'"))
+                conn.commit()
+                logging.info("✅ Added trigger_type column")
+            
+            if 'main_question' not in columns:
+                conn.execute(text("ALTER TABLE auto_response ADD COLUMN main_question TEXT"))
+                conn.commit()
+                logging.info("✅ Added main_question column")
+                
+            if 'option_a' not in columns:
+                conn.execute(text("ALTER TABLE auto_response ADD COLUMN option_a VARCHAR(200)"))
+                conn.commit()
+                logging.info("✅ Added option_a column")
+                
+            if 'option_b' not in columns:
+                conn.execute(text("ALTER TABLE auto_response ADD COLUMN option_b VARCHAR(200)"))
+                conn.commit()
+                logging.info("✅ Added option_b column")
+                
+            if 'option_c' not in columns:
+                conn.execute(text("ALTER TABLE auto_response ADD COLUMN option_c VARCHAR(200)"))
+                conn.commit()
+                logging.info("✅ Added option_c column")
+                
+            if 'option_d' not in columns:
+                conn.execute(text("ALTER TABLE auto_response ADD COLUMN option_d VARCHAR(200)"))
+                conn.commit()
+                logging.info("✅ Added option_d column")
             
     except Exception as e:
         logging.info(f"Migration info: {e}")

@@ -433,12 +433,28 @@ def add_response():
     if request.method == 'POST':
         trigger_keyword = request.form.get('trigger_keyword')
         response_text = request.form.get('response_text')
+        response_type = request.form.get('response_type', 'simple')
+        trigger_type = request.form.get('trigger_type', 'first_message')
+        main_question = request.form.get('main_question')
+        option_a = request.form.get('option_a')
+        option_b = request.form.get('option_b')
+        option_c = request.form.get('option_c')
+        option_d = request.form.get('option_d')
         is_active = request.form.get('is_active') == 'on'
+        pause_ai = request.form.get('pause_ai') == 'on'
         
         response = AutoResponse()
         response.trigger_keyword = trigger_keyword
-        response.response_text = response_text
+        response.response_text = response_text or ""
+        response.response_type = response_type
+        response.trigger_type = trigger_type
+        response.main_question = main_question
+        response.option_a = option_a
+        response.option_b = option_b
+        response.option_c = option_c
+        response.option_d = option_d
         response.is_active = is_active
+        response.pause_ai = pause_ai
         
         try:
             db.session.add(response)
@@ -527,6 +543,12 @@ def api_responses():
             'trigger_keyword': resp.trigger_keyword,
             'response_text': resp.response_text,
             'response_type': getattr(resp, 'response_type', 'simple'),
+            'trigger_type': getattr(resp, 'trigger_type', 'first_message'),
+            'main_question': getattr(resp, 'main_question', ''),
+            'option_a': getattr(resp, 'option_a', ''),
+            'option_b': getattr(resp, 'option_b', ''),
+            'option_c': getattr(resp, 'option_c', ''),
+            'option_d': getattr(resp, 'option_d', ''),
             'pause_ai': getattr(resp, 'pause_ai', False),
             'is_active': resp.is_active
         })
@@ -541,15 +563,21 @@ def api_add_response():
     try:
         response = AutoResponse()
         response.trigger_keyword = data.get('trigger_keyword')
-        response.response_text = data.get('response_text')
+        response.response_text = data.get('response_text', '')
         response.response_type = data.get('response_type', 'simple')
+        response.trigger_type = data.get('trigger_type', 'first_message')
+        response.main_question = data.get('main_question')
+        response.option_a = data.get('option_a')
+        response.option_b = data.get('option_b')
+        response.option_c = data.get('option_c')
+        response.option_d = data.get('option_d')
         response.pause_ai = data.get('pause_ai', False)
         response.is_active = data.get('is_active', True)
         
         db.session.add(response)
         db.session.commit()
         
-        logging.info(f"Nova resposta automática adicionada: {response.trigger_keyword} (Tipo: {response.response_type}, Pausar IA: {response.pause_ai})")
+        logging.info(f"Nova resposta automática adicionada: {response.trigger_keyword} (Tipo: {response.response_type}, Gatilho: {response.trigger_type}, Pausar IA: {response.pause_ai})")
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()

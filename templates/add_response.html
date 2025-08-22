@@ -17,23 +17,95 @@
         <form method="POST">
             <div class="mb-3">
                 <label for="trigger_keyword" class="form-label">
-                    <i class="fas fa-key me-2"></i>Palavra-chave ou Trigger
+                    <i class="fas fa-key me-2"></i>Palavra-chave / Pergunta
                 </label>
                 <input type="text" class="form-control" id="trigger_keyword" name="trigger_keyword" 
-                       placeholder="Ex: oi, olá, ajuda, preço..." required>
+                       placeholder="Ex: horário, preço, produto..." required>
                 <div class="form-text">
-                    Digite a palavra ou frase que irá ativar esta resposta automática.
+                    Palavra-chave que irá ativar esta resposta
                 </div>
             </div>
 
             <div class="mb-3">
+                <label class="form-label">
+                    <i class="fas fa-cogs me-2"></i>Tipo de Resposta
+                </label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="response_type" id="response_simple" value="simple" checked>
+                    <label class="form-check-label" for="response_simple">
+                        Resposta Simples
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="response_type" id="response_multiple" value="multiple">
+                    <label class="form-check-label" for="response_multiple">
+                        Resposta com Opções (a, b, c, d)
+                    </label>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="trigger_type" class="form-label">
+                    <i class="fas fa-flag me-2"></i>Tipo de Gatilho
+                </label>
+                <select class="form-select" id="trigger_type" name="trigger_type">
+                    <option value="first_message" selected>Primeira mensagem (contato inicial)</option>
+                    <option value="follow_up">Mensagens subsequentes (continuidade)</option>
+                </select>
+                <div class="form-text">
+                    Quando esta resposta deve ser ativada
+                </div>
+            </div>
+
+            <!-- Resposta Simples -->
+            <div id="simple_response_section" class="mb-3">
                 <label for="response_text" class="form-label">
                     <i class="fas fa-comment me-2"></i>Texto da Resposta
                 </label>
                 <textarea class="form-control" id="response_text" name="response_text" rows="4" 
                           placeholder="Digite a mensagem que será enviada automaticamente..." required></textarea>
-                <div class="form-text">
-                    Esta será a mensagem enviada quando a palavra-chave for detectada.
+            </div>
+
+            <!-- Resposta com Múltipla Escolha -->
+            <div id="multiple_response_section" class="mb-3" style="display: none;">
+                <div class="mb-3">
+                    <label for="main_question" class="form-label">
+                        <i class="fas fa-question-circle me-2"></i>Pergunta Principal
+                    </label>
+                    <textarea class="form-control" id="main_question" name="main_question" rows="3" 
+                              placeholder="Ex: Escolha uma opção:"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-list me-2"></i>Opções de Resposta
+                    </label>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <div class="input-group">
+                                <span class="input-group-text">a)</span>
+                                <input type="text" class="form-control" id="option_a" name="option_a" placeholder="Opção A">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="input-group">
+                                <span class="input-group-text">b)</span>
+                                <input type="text" class="form-control" id="option_b" name="option_b" placeholder="Opção B">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="input-group">
+                                <span class="input-group-text">c)</span>
+                                <input type="text" class="form-control" id="option_c" name="option_c" placeholder="Opção C">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="input-group">
+                                <span class="input-group-text">d)</span>
+                                <input type="text" class="form-control" id="option_d" name="option_d" placeholder="Opção D">
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -44,24 +116,17 @@
                         <i class="fas fa-toggle-on me-2"></i>Resposta ativa
                     </label>
                 </div>
-                <div class="form-text">
-                    Marque para ativar esta resposta imediatamente após salvar.
-                </div>
             </div>
 
             <div class="mb-3">
-                <label for="priority" class="form-label">
-                    <i class="fas fa-sort-numeric-up me-2"></i>Prioridade
-                </label>
-                <select class="form-select" id="priority" name="priority">
-                    <option value="1">Baixa (1)</option>
-                    <option value="2">Normal (2)</option>
-                    <option value="3" selected>Alta (3)</option>
-                    <option value="4">Muito Alta (4)</option>
-                    <option value="5">Crítica (5)</option>
-                </select>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="pause_ai" name="pause_ai">
+                    <label class="form-check-label" for="pause_ai">
+                        <i class="fas fa-pause me-2"></i>Pausar IA após esta resposta (aguardar intervenção humana)
+                    </label>
+                </div>
                 <div class="form-text">
-                    Respostas com prioridade maior são processadas primeiro.
+                    Marque se deseja que a conversa seja pausada para atendimento manual após esta resposta
                 </div>
             </div>
 
@@ -125,20 +190,68 @@
 
 {% block extra_scripts %}
 <script>
-// Live preview
 document.addEventListener('DOMContentLoaded', function() {
+    const responseTypeSimple = document.getElementById('response_simple');
+    const responseTypeMultiple = document.getElementById('response_multiple');
+    const simpleSection = document.getElementById('simple_response_section');
+    const multipleSection = document.getElementById('multiple_response_section');
     const triggerInput = document.getElementById('trigger_keyword');
     const responseInput = document.getElementById('response_text');
     const previewTrigger = document.getElementById('preview-trigger');
     const previewResponse = document.getElementById('preview-response');
     
-    function updatePreview() {
-        previewTrigger.textContent = triggerInput.value || 'oi';
-        previewResponse.textContent = responseInput.value || 'Olá! Como posso te ajudar?';
+    // Toggle response type sections
+    function toggleResponseSections() {
+        if (responseTypeMultiple.checked) {
+            simpleSection.style.display = 'none';
+            multipleSection.style.display = 'block';
+            responseInput.removeAttribute('required');
+        } else {
+            simpleSection.style.display = 'block';
+            multipleSection.style.display = 'none';
+            responseInput.setAttribute('required', 'required');
+        }
     }
     
+    // Live preview
+    function updatePreview() {
+        previewTrigger.textContent = triggerInput.value || 'oi';
+        
+        if (responseTypeMultiple.checked) {
+            let previewText = document.getElementById('main_question').value || 'Escolha uma opção:';
+            const optionA = document.getElementById('option_a').value;
+            const optionB = document.getElementById('option_b').value;
+            const optionC = document.getElementById('option_c').value;
+            const optionD = document.getElementById('option_d').value;
+            
+            if (optionA || optionB || optionC || optionD) {
+                previewText += '\n\n';
+                if (optionA) previewText += `a) ${optionA}\n`;
+                if (optionB) previewText += `b) ${optionB}\n`;
+                if (optionC) previewText += `c) ${optionC}\n`;
+                if (optionD) previewText += `d) ${optionD}\n`;
+            }
+            
+            previewResponse.innerHTML = previewText.replace(/\n/g, '<br>');
+        } else {
+            previewResponse.textContent = responseInput.value || 'Olá! Como posso te ajudar?';
+        }
+    }
+    
+    // Event listeners
+    responseTypeSimple.addEventListener('change', toggleResponseSections);
+    responseTypeMultiple.addEventListener('change', toggleResponseSections);
     triggerInput.addEventListener('input', updatePreview);
     responseInput.addEventListener('input', updatePreview);
+    document.getElementById('main_question').addEventListener('input', updatePreview);
+    document.getElementById('option_a').addEventListener('input', updatePreview);
+    document.getElementById('option_b').addEventListener('input', updatePreview);
+    document.getElementById('option_c').addEventListener('input', updatePreview);
+    document.getElementById('option_d').addEventListener('input', updatePreview);
+    
+    // Initialize
+    toggleResponseSections();
+    updatePreview();
 });
 </script>
 {% endblock %}

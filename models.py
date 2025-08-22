@@ -31,6 +31,12 @@ class AutoResponse(db.Model):
     trigger_keyword = db.Column(db.String(100), nullable=False, unique=True)
     response_text = db.Column(db.Text, nullable=False)
     response_type = db.Column(db.String(20), default='simple')  # 'simple' or 'multiple'
+    trigger_type = db.Column(db.String(20), default='first_message')  # 'first_message' or 'follow_up'
+    main_question = db.Column(db.Text)  # Para respostas com múltipla escolha
+    option_a = db.Column(db.String(200))  # Opção A
+    option_b = db.Column(db.String(200))  # Opção B
+    option_c = db.Column(db.String(200))  # Opção C
+    option_d = db.Column(db.String(200))  # Opção D
     pause_ai = db.Column(db.Boolean, default=False)  # Pause AI after this response
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
