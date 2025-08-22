@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Conectar WhatsApp - AsA{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8 col-lg-10">
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fab fa-whatsapp text-success"></i>
+                AsA - Conectar WhatsApp
+            </h1>
+            <p class="lead text-muted">Conecte seu WhatsApp para ativar as respostas automáticas</p>
+        </div>
+
+        <div class="row">
+            <!-- Status da Conexão -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #25D366, #128C7E);">
+                        <h5 class="mb-0 text-white">
+                            <i class="fas fa-wifi me-2"></i>Status da Conexão
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div id="connection-status">
+                            <div class="text-muted mb-3">
+                                <i class="fas fa-spinner fa-spin fa-3x"></i>
+                            </div>
+                            <h5 class="text-muted">Verificando status...</h5>
+                            <p class="text-muted">Aguarde um momento</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #4A90E2, #357ABD);">
+                        <h5 class="mb-0 text-white">
+                            <i class="fas fa-qrcode me-2"></i>Código QR
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div id="qr-code-container">
+                            <div id="qr-display" class="mb-3">
+                                <div class="text-muted">
+                                    <i class="fas fa-qrcode fa-4x"></i>
+                                </div>
+                                <p class="mt-3">Clique no botão abaixo para gerar o código QR</p>
+                            </div>
+                            
+                            <button id="generate-qr-btn" class="btn btn-primary btn-lg">
+                                <i class="fas fa-qrcode me-2"></i>Gerar Código QR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instruções -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-info-circle me-2 text-info"></i>Como conectar
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ol class="list-unstyled">
+                            <li class="mb-2">
+                                <span class="badge bg-primary rounded-pill me-2">1</span>
+                                Abra o WhatsApp no seu celular
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-primary rounded-pill me-2">2</span>
+                                Toque nos três pontos (⋮) no canto superior direito
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-primary rounded-pill me-2">3</span>
+                                Escolha "Aparelhos conectados"
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <ol class="list-unstyled">
+                            <li class="mb-2">
+                                <span class="badge bg-success rounded-pill me-2">4</span>
+                                Toque em "Conectar um aparelho"
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-success rounded-pill me-2">5</span>
+                                Escaneie o código QR acima
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-success rounded-pill me-2">6</span>
+                                Aguarde a confirmação da conexão
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botão para ir ao Dashboard após conectar -->
+        <div class="text-center mt-4" id="dashboard-link" style="display: none;">
+            <a href="/dashboard" class="btn btn-success btn-lg">
+                <i class="fas fa-tachometer-alt me-2"></i>Ir para o Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let connectionCheckInterval;
+
+// Verificar status inicial
+checkConnectionStatus();
+
+// Generate QR Code
+document.getElementById('generate-qr-btn')?.addEventListener('click', function() {
+    const btn = this;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando QR...';
+    btn.disabled = true;
+    
+    fetch('/api/baileys-qr')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.qr_image) {
+                showQRCode(data.qr_image);
+                btn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Gerar Novo Código';
+                btn.disabled = false;
+                
+                // Começar a verificar conexão periodicamente
+                startConnectionCheck();
+            } else {
+                alert('QR Code não disponível. Tente novamente em alguns segundos.');
+                btn.innerHTML = '<i class="fas fa-qrcode me-2"></i>Gerar Código QR';
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Erro ao carregar QR Code');
+            btn.innerHTML = '<i class="fas fa-qrcode me-2"></i>Gerar Código QR';
+            btn.disabled = false;
+        });
+});
+
+function showQRCode(qrImage) {
+    document.getElementById('qr-display').innerHTML = `
+        <div class="p-3 bg-white rounded border d-inline-block">
+            <img src="${qrImage}" alt="QR Code WhatsApp" class="img-fluid" style="max-width: 280px;">
+        </div>
+        <div class="mt-3">
+            <p class="text-success mb-2">
+                <i class="fas fa-mobile-alt me-2"></i>
+                <strong>Escaneie este código com seu WhatsApp</strong>
+            </p>
+        </div>
+    `;
+}
+
+function checkConnectionStatus() {
+    fetch('/api/baileys-status')
+        .then(response => response.json())
+        .then(data => {
+            updateConnectionStatus(data);
+        })
+        .catch(error => {
+            console.error('Error checking status:', error);
+        });
+}
+
+function updateConnectionStatus(status) {
+    const statusDiv = document.getElementById('connection-status');
+    
+    if (status.connected) {
+        statusDiv.innerHTML = `
+            <div class="text-success mb-3">
+                <i class="fas fa-check-circle fa-3x"></i>
+            </div>
+            <h5 class="text-success">WhatsApp Conectado!</h5>
+            <p class="text-muted">Sistema ativo e funcionando</p>
+            <div class="alert alert-success">
+                <i class="fas fa-robot me-2"></i>
+                Respostas automáticas ativadas
+            </div>
+        `;
+        
+        // Esconder QR Code e mostrar link para dashboard
+        document.getElementById('qr-code-container').innerHTML = `
+            <div class="text-success mb-3">
+                <i class="fas fa-check-circle fa-3x"></i>
+            </div>
+            <h6 class="text-success">Conectado com Sucesso!</h6>
+            <p class="text-muted">WhatsApp está conectado e ativo</p>
+        `;
+        
+        document.getElementById('dashboard-link').style.display = 'block';
+        
+        // Parar verificação
+        if (connectionCheckInterval) {
+            clearInterval(connectionCheckInterval);
+        }
+    } else {
+        statusDiv.innerHTML = `
+            <div class="text-warning mb-3">
+                <i class="fas fa-exclamation-triangle fa-3x"></i>
+            </div>
+            <h5 class="text-warning">WhatsApp Desconectado</h5>
+            <p class="text-muted">Gere e escaneie o código QR para conectar</p>
+        `;
+    }
+}
+
+function startConnectionCheck() {
+    // Verificar a cada 3 segundos se conectou
+    connectionCheckInterval = setInterval(() => {
+        checkConnectionStatus();
+    }, 3000);
+}
+</script>
+{% endblock %}

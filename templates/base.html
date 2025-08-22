@@ -23,31 +23,40 @@
                 <i class="fab fa-whatsapp text-success me-2"></i>AsA
             </a>
             
-            <div class="navbar-nav ms-auto">
-                {% if admin_logged_in %}
-                    <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('index') }}">
+                        <i class="fas fa-plug me-1"></i>Conectar
+                    </a>
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
                         <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                     </a>
-                    <a class="nav-link" href="{{ url_for('admin_conversations') }}">
-                        <i class="fas fa-comments me-1"></i>Conversas
-                    </a>
-                    <a class="nav-link" href="{{ url_for('ai_config') }}">
-                        <i class="fas fa-brain me-1"></i>IA Config
-                    </a>
-                    <a class="nav-link" href="{{ url_for('whatsapp_apis') }}">
-                        <i class="fas fa-plug me-1"></i>APIs
-                    </a>
-                    <a class="nav-link" href="{{ url_for('admin_logout') }}">
-                        <i class="fas fa-sign-out-alt me-1"></i>Sair
-                    </a>
-                {% else %}
-                    <a class="nav-link" href="{{ url_for('whatsapp_apis') }}">
-                        <i class="fas fa-plug me-1"></i>APIs
-                    </a>
-                    <a class="nav-link" href="{{ url_for('admin_login') }}">
-                        <i class="fas fa-user-shield me-1"></i>Admin
-                    </a>
-                {% endif %}
+                    {% if admin_logged_in %}
+                        <a class="nav-link" href="{{ url_for('admin_conversations') }}">
+                            <i class="fas fa-comments me-1"></i>Conversas
+                        </a>
+                        <a class="nav-link" href="{{ url_for('admin_responses') }}">
+                            <i class="fas fa-reply me-1"></i>Respostas
+                        </a>
+                        <a class="nav-link" href="{{ url_for('ai_config') }}">
+                            <i class="fas fa-brain me-1"></i>IA Config
+                        </a>
+                        <a class="nav-link" href="{{ url_for('whatsapp_apis') }}">
+                            <i class="fas fa-code me-1"></i>APIs
+                        </a>
+                        <a class="nav-link" href="{{ url_for('admin_logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i>Sair
+                        </a>
+                    {% else %}
+                        <a class="nav-link" href="{{ url_for('admin_login') }}">
+                            <i class="fas fa-user-shield me-1"></i>Admin
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>

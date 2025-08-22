@@ -14,11 +14,21 @@ ADMIN_PASSWORD_HASH = generate_password_hash(os.environ.get("ADMIN_PASSWORD", "a
 
 @app.route('/')
 def index():
-    """Main dashboard - unified interface"""
+    """Página inicial - apenas conexão WhatsApp"""
+    return render_template('connect.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """Dashboard principal com estatísticas e funcionalidades"""
     # Get statistics
     total_conversations = Conversation.query.count()
     total_messages = Message.query.count()
     active_responses = AutoResponse.query.filter_by(is_active=True).count()
+    
+    # Recent conversations
+    recent_conversations = Conversation.query.order_by(
+        Conversation.updated_at.desc()
+    ).limit(5).all()
     
     stats = {
         'total_conversations': total_conversations,
@@ -26,7 +36,7 @@ def index():
         'active_responses': active_responses
     }
     
-    return render_template('dashboard.html', stats=stats)
+    return render_template('dashboard.html', stats=stats, recent_conversations=recent_conversations)
 
 @app.route('/generate_qr')
 def generate_qr():
@@ -70,6 +80,26 @@ def connection_status():
     """Get current connection status"""
     status = whatsapp_service.get_connection_status()
     return jsonify(status)
+
+@app.route('/api/baileys-status')
+def api_baileys_status():
+    """Get Baileys service status"""
+    try:
+        import requests
+        response = requests.get('http://localhost:3001/status', timeout=5)
+        return jsonify(response.json())
+    except:
+        return jsonify({'connected': False, 'status': 'service_error'})
+
+@app.route('/api/baileys-qr')
+def api_baileys_qr():
+    """Get QR code from Baileys service"""
+    try:
+        import requests
+        response = requests.get('http://localhost:3001/qr', timeout=5)
+        return jsonify(response.json())
+    except:
+        return jsonify({'success': False, 'message': 'Serviço indisponível'})
 
 @app.route('/whatsapp-apis')
 def whatsapp_apis():
